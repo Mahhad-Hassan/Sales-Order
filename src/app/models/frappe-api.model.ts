@@ -21,6 +21,7 @@ export interface FrappeDocTypeField {
   label: string;
   fieldtype: string;
   options?: string | null;
+  default?: string | null;
 }
 
 export interface FrappeDocTypeMetadata {

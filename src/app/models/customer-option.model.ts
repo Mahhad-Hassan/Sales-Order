@@ -17,6 +17,7 @@ export interface CustomerAddressOption {
 export interface CustomerOption {
   docName: string;
   displayName: string;
+  taxId: string;
   billTo: Partial<CustomerPartyDetails>;
   shipTo: Partial<CustomerPartyDetails>;
   billToAddresses: CustomerAddressOption[];

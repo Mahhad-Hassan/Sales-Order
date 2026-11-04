@@ -5,6 +5,7 @@ import { LoginPage } from './login';
 
 export const appRoutes: Routes = [
   { path: 'login', component: LoginPage },
+  { path: 'sales-order/:name', component: App, canActivate: [frappeAuthGuard] },
   { path: 'sales-order', component: App, canActivate: [frappeAuthGuard] },
   { path: '', pathMatch: 'full', redirectTo: 'sales-order' },
   { path: '**', redirectTo: 'sales-order' },

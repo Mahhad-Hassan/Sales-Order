@@ -70,6 +70,69 @@
         }
       </div>
     </header>
+    <div class="mb-3 flex flex-wrap items-center justify-end gap-2 text-sm">
+      <label class="sr-only" for="existing-order">Open existing Sales Order</label>
+      <select
+        id="existing-order"
+        class="min-h-[34px] max-w-full border border-[#a6a6a6] bg-white px-2 text-xs"
+        aria-label="Open existing Sales Order"
+        [value]="currentOrderName()"
+        [disabled]="optionsLoading() || orderLoading()"
+        (change)="loadExistingOrder($event)"
+      >
+        <option value="" [selected]="!currentOrderName()">Open existing Sales Order...</option>
+        @if (currentOrderName()) {
+          <option [value]="currentOrderName()" selected>
+            {{ currentOrderName() }}
+            @if (currentSalesOrderOption; as order) {
+              — {{ order.customer }} ({{ order.transaction_date }})
+            }
+          </option>
+        }
+        @for (order of otherSalesOrderOptions; track order.name) {
+          <option [value]="order.name">{{ order.name }} — {{ order.customer }} ({{ order.transaction_date }})</option>
+        }
+      </select>
+      <button
+        class="min-h-[34px] border border-[#6c8753] bg-[#e6eddc] px-3 text-xs font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7]"
+        type="button"
+        (click)="startNewOrder()"
+      >New Order</button>
+    </div>
+    @if (optionsLoading() || orderLoading()) {
+      <p class="mb-2 text-sm text-[#555]" role="status">
+        {{ orderLoading() ? 'Loading Sales Order...' : 'Loading Sales Order options...' }}
+      </p>
+    }
+    @if (orderError()) {
+      <p class="mb-2 text-sm text-[#8b3c2c]" role="alert">{{ orderError() }}</p>
+    }
+    @if (orderMessage()) {
+      <p class="mb-2 text-sm text-[#355224]" role="status">{{ orderMessage() }}</p>
+    }
+    @if (isExistingOrder() && !canUpdateOrder() && !orderLoading()) {
+      <p class="mb-2 text-sm text-[#8b3c2c]" role="status">This Sales Order is submitted and is read-only.</p>
+    }
+    <section class="mb-3 grid grid-cols-2 border border-[#a6a6a6] max-[700px]:grid-cols-1" aria-label="ERPNext order settings">
+      <label class="flex min-w-0 flex-col border-r border-[#a6a6a6] max-[700px]:border-r-0">
+        <span class="border-b border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">COMPANY</span>
+        <select class="h-[34px] w-full min-w-0 border-0 bg-white px-2 text-[13px]" aria-label="Company" formControlName="company">
+          <option value="">Select company...</option>
+          @for (company of companies(); track company.name) {
+            <option [value]="company.name">{{ company.name }} ({{ company.default_currency }})</option>
+          }
+        </select>
+      </label>
+      <label class="flex min-w-0 flex-col">
+        <span class="border-b border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">SELLING PRICE LIST</span>
+        <select class="h-[34px] w-full min-w-0 border-0 bg-white px-2 text-[13px]" aria-label="Selling price list" formControlName="sellingPriceList">
+          <option value="">Select price list...</option>
+          @for (priceList of filteredPriceLists; track priceList.name) {
+            <option [value]="priceList.name">{{ priceList.name }} ({{ priceList.currency }})</option>
+          }
+        </select>
+      </label>
+    </section>
     @if (customerLoadError() && !customerDropdownOpen() && selectedCustomerLabel()) {
       <p class="mx-auto mt-[-10px] mb-3 w-full max-w-[1120px] text-sm text-[#8b3c2c]" role="alert">
         {{ customerLoadError() }}
@@ -219,21 +282,34 @@
     <section class="mt-2 grid grid-cols-4 border-t border-l border-[#a6a6a6] max-[700px]:grid-cols-2" aria-label="Order dates and terms">
       <label class="flex min-w-0 flex-col">
         <span class="flex min-h-[29px] items-center border border-t-0 border-l-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">DELIVERY DATE</span>
-        <input class="h-[31px] w-full min-w-0 rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" type="text" aria-label="Delivery date" formControlName="deliveryDate" />
+        <input class="h-[31px] w-full min-w-0 rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" type="date" lang="en-US" placeholder="mm/dd/yyyy" aria-label="Delivery date" formControlName="deliveryDate" />
       </label>
       <label class="flex min-w-0 flex-col">
         <span class="flex min-h-[29px] items-center border border-t-0 border-l-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">DUE DATE</span>
-        <input class="h-[31px] w-full min-w-0 rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" type="text" aria-label="Due date" formControlName="dueDate" />
+        <input class="h-[31px] w-full min-w-0 rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" type="date" lang="en-US" aria-label="Due date" formControlName="dueDate" />
       </label>
       <label class="flex min-w-0 flex-col">
         <span class="flex min-h-[29px] items-center border border-t-0 border-l-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">PAYMENT TERMS</span>
-        <input class="h-[31px] w-full min-w-0 rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" type="text" aria-label="Payment terms" formControlName="paymentTerms" />
+        <select class="h-[31px] w-full min-w-0 rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" aria-label="Payment terms" formControlName="paymentTerms">
+          <option value="">Select payment term...</option>
+          @for (term of paymentTerms(); track term.name) {
+            <option [value]="term.name">{{ term.payment_term_name }}</option>
+          }
+        </select>
       </label>
       <label class="flex min-w-0 flex-col">
         <span class="flex min-h-[29px] items-center border border-t-0 border-l-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">INCOTERM</span>
-        <input class="h-[31px] w-full min-w-0 rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" type="text" aria-label="Incoterm" formControlName="incoterm" />
+        <select class="h-[31px] w-full min-w-0 rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" aria-label="Incoterm" formControlName="incoterm">
+          <option value="">Select Incoterm...</option>
+          @for (incoterm of incoterms(); track incoterm.name) {
+            <option [value]="incoterm.name">{{ incoterm.title }}</option>
+          }
+        </select>
       </label>
     </section>
+    @if (paymentTermError()) {
+      <p class="mt-1 mb-0 text-xs text-[#8b3c2c]" role="alert">Could not load the saved payment term: {{ paymentTermError() }}</p>
+    }
 
     <section class="mt-[17px]" aria-label="Quantity">
       <div class="overflow-x-auto">
@@ -264,7 +340,7 @@
               <tr [formGroupName]="rowIndex">
                 <td class="text-center" colspan="2"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Quantity" type="text" formControlName="quantity" /></td>
                 <td><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Unit" type="text" formControlName="unit" /></td>
-                <td class="text-center" colspan="3"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Product Name" type="text" formControlName="productName" /></td>
+                <td class="text-center" colspan="3"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Product Name" type="text" list="sales-order-items" formControlName="productName" /></td>
                 <td colspan="2"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Unit Price" type="text" formControlName="unitPrice" /></td>
                 <td colspan="2">
                   <div class="flex h-[38px] items-stretch">
@@ -293,6 +369,19 @@
       <div class="flex justify-end pt-[9px]">
         <button class="inline-flex min-h-[34px] items-center gap-[7px] rounded-sm border border-[#6c8753] bg-[#e6eddc] px-3 text-[13px] font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7]" type="button" (click)="addRow()"><span class="text-[18px] leading-none" aria-hidden="true">+</span> Add Row</button>
       </div>
+      <datalist id="sales-order-items">
+        @for (item of orderItems(); track item.item_code) {
+          <option [value]="item.item_name">{{ item.item_code }}</option>
+        }
+      </datalist>
     </section>
+    <div class="mt-4 flex justify-end">
+      <button
+        class="min-h-[38px] rounded-sm border border-[#526a3e] bg-[#355224] px-5 text-sm font-bold text-white cursor-pointer hover:bg-[#283e1d] disabled:cursor-not-allowed disabled:opacity-60"
+        type="button"
+        [disabled]="savingOrder() || optionsLoading() || orderLoading() || (isExistingOrder() && !canUpdateOrder())"
+        (click)="saveOrder()"
+      >{{ savingOrder() ? 'Saving...' : isExistingOrder() ? 'Update Sales Order' : 'Save Sales Order' }}</button>
+    </div>
   </form>
 </main>

@@ -29,6 +29,11 @@ interface CustomerContactDetails {
   primaryEmail: string;
 }
 
+function readTaxId(customer: FrappeDocument): string {
+  const value = customer['tax_id'];
+  return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
+}
+
 @Injectable({ providedIn: 'root' })
 export class FrappeCustomerService {
   private readonly api = inject(FrappeApiService);
@@ -243,7 +248,7 @@ export class FrappeCustomerService {
   ): CustomerOption {
     const displayField = this.fieldByLabel(context.customerMetadata, ['Customer Name']);
     const displayName = this.readValue(context.customer, displayField) || docName;
-    const taxField = this.fieldByLabel(context.customerMetadata, ['NTN', 'Tax ID']);
+    const taxId = readTaxId(context.customer);
     const personName = [
       this.readValue(context.customer, this.fieldByLabel(context.customerMetadata, ['First Name'])),
       this.readValue(context.customer, this.fieldByLabel(context.customerMetadata, ['Last Name'])),
@@ -256,7 +261,7 @@ export class FrappeCustomerService {
       phoneNo: contactPhones.phoneNo,
       faxNo: contactPhones.faxNo,
       email: contactDetails.primaryEmail,
-      ntn: this.readValue(context.customer, taxField),
+      ntn: taxId,
     };
     const billToAddresses: CustomerAddressOption[] = [];
     const shipToAddresses: CustomerAddressOption[] = [];
@@ -296,6 +301,7 @@ export class FrappeCustomerService {
     return {
       docName,
       displayName,
+      taxId,
       billTo: billToAddresses[0]?.details ?? customerDetails,
       shipTo: shipToAddresses[0]?.details ?? customerDetails,
       billToAddresses,
@@ -309,6 +315,7 @@ export class FrappeCustomerService {
     return {
       docName,
       displayName: this.readValue(record, displayField) || docName,
+      taxId: '',
       billTo: {},
       shipTo: {},
       billToAddresses: [],
