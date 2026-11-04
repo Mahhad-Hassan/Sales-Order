@@ -8,11 +8,19 @@ export interface CustomerPartyDetails {
   ntn: string;
 }
 
+export interface CustomerAddressOption {
+  docName: string;
+  label: string;
+  details: CustomerPartyDetails;
+}
+
 export interface CustomerOption {
   docName: string;
   displayName: string;
   billTo: Partial<CustomerPartyDetails>;
   shipTo: Partial<CustomerPartyDetails>;
+  billToAddresses: CustomerAddressOption[];
+  shipToAddresses: CustomerAddressOption[];
 }
 
 export const EMPTY_CUSTOMER_PARTY: CustomerPartyDetails = {

@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { forkJoin, map, Observable, of, shareReplay, switchMap } from 'rxjs';
-import { CustomerOption, CustomerPartyDetails, EMPTY_CUSTOMER_PARTY } from '../models/customer-option.model';
+import { CustomerAddressOption, CustomerOption, CustomerPartyDetails } from '../models/customer-option.model';
 import { FrappeDocTypeField, FrappeDocTypeMetadata } from '../models/frappe-api.model';
+import { ContactPhoneRecord, mapContactPhoneNumbers } from '../models/customer-phone.mapper';
 import { FrappeApiService } from './frappe-api.service';
 
 type AddressTarget = 'billTo' | 'shipTo' | null;
@@ -15,6 +16,10 @@ interface AddressReference {
 interface LoadedAddress {
   reference: AddressReference;
   document: FrappeDocument;
+}
+
+interface DynamicLinkRecord {
+  name: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -52,51 +57,79 @@ export class FrappeCustomerService {
       dynamicLinkMetadata: this.api.getDocument<FrappeDocTypeMetadata>('DocType', 'Dynamic Link'),
       customer: this.api.getDocument<FrappeDocument>('Customer', docName),
     }).pipe(
-      switchMap((context) => this.loadAddresses(
-        docName,
-        context.customerMetadata,
-        context.dynamicLinkMetadata,
-        context.customer,
-      ).pipe(
-        map((addresses) => this.toCustomerOption(docName, context, addresses)),
+      switchMap((context) => this.loadDynamicLinks(docName, context.dynamicLinkMetadata).pipe(
+        switchMap((dynamicLinks) => forkJoin({
+          addresses: this.loadAddresses(
+            context.customerMetadata,
+            context.customer,
+            dynamicLinks,
+          ),
+          contactPhoneNumbers: this.loadContactPhoneNumbers(dynamicLinks),
+        }).pipe(
+          map(({ addresses, contactPhoneNumbers }) =>
+            this.toCustomerOption(docName, context, addresses, contactPhoneNumbers),
+          ),
+        )),
       )),
     );
   }
 
-  private loadAddresses(
+  private loadDynamicLinks(
     customerName: string,
-    customerMetadata: FrappeDocTypeMetadata,
-    dynamicLinkMetadata: FrappeDocTypeMetadata,
-    customerDocument: FrappeDocument,
-  ): Observable<LoadedAddress[]> {
-    return this.addressReferences(customerName, customerMetadata, dynamicLinkMetadata, customerDocument).pipe(
-      switchMap((references) => {
-        const uniqueReferences = [...references.reduce((byName, reference) => {
-          const current = byName.get(reference.docName);
-          if (!current || (!current.target && reference.target)) {
-            byName.set(reference.docName, reference);
-          }
-          return byName;
-        }, new Map<string, AddressReference>()).values()];
-        if (!uniqueReferences.length) {
-          return of([]);
-        }
+    metadata: FrappeDocTypeMetadata,
+  ): Observable<FrappeDocument[]> {
+    const linkDoctype = this.fieldByLabel(metadata, ['Link DocType', 'Link Document Type']);
+    const linkName = this.fieldByLabel(metadata, ['Link Name']);
+    if (!linkDoctype || !linkName) {
+      return of([]);
+    }
 
-        return forkJoin(uniqueReferences.map((reference) =>
-          this.api.getDocument<FrappeDocument>('Address', reference.docName).pipe(
-            map((document) => ({ reference, document })),
-          ),
-        ));
-      }),
+    const filters = [
+      [linkDoctype.fieldname, '=', 'Customer'],
+      [linkName.fieldname, '=', customerName],
+    ];
+    return this.api.getList<DynamicLinkRecord>('Dynamic Link', ['name'], filters, 100).pipe(
+      switchMap((records) => records.length
+        ? forkJoin(records.map((record) =>
+          this.api.getDocument<FrappeDocument>('Dynamic Link', record.name),
+        ))
+        : of([] as FrappeDocument[])),
     );
   }
 
-  private addressReferences(
-    customerName: string,
+  private loadAddresses(
     customerMetadata: FrappeDocTypeMetadata,
-    dynamicLinkMetadata: FrappeDocTypeMetadata,
     customerDocument: FrappeDocument,
-  ): Observable<AddressReference[]> {
+    dynamicLinks: FrappeDocument[],
+  ): Observable<LoadedAddress[]> {
+    const references = this.addressReferences(
+      customerMetadata,
+      customerDocument,
+      dynamicLinks,
+    );
+    const uniqueReferences = [...references.reduce((byName, reference) => {
+      const current = byName.get(reference.docName);
+      if (!current || (!current.target && reference.target)) {
+        byName.set(reference.docName, reference);
+      }
+      return byName;
+    }, new Map<string, AddressReference>()).values()];
+    if (!uniqueReferences.length) {
+      return of([]);
+    }
+
+    return forkJoin(uniqueReferences.map((reference) =>
+      this.api.getDocument<FrappeDocument>('Address', reference.docName).pipe(
+        map((document) => ({ reference, document })),
+      ),
+    ));
+  }
+
+  private addressReferences(
+    customerMetadata: FrappeDocTypeMetadata,
+    customerDocument: FrappeDocument,
+    dynamicLinks: FrappeDocument[],
+  ): AddressReference[] {
     const directReferences = customerMetadata.fields
       .filter((field) => field.fieldtype === 'Link' && field.options === 'Address')
       .flatMap((field) => {
@@ -106,34 +139,69 @@ export class FrappeCustomerService {
           ? 'billTo'
           : label.includes('ship')
             ? 'shipTo'
+            : label.includes('primary')
+              ? 'billTo'
             : null;
-        return docName && target ? [{ docName, target } as AddressReference] : [];
+        return docName ? [{ docName, target } as AddressReference] : [];
       });
 
-    const linkDoctype = this.fieldByLabel(dynamicLinkMetadata, ['Link DocType', 'Link Document Type']);
-    const linkName = this.fieldByLabel(dynamicLinkMetadata, ['Link Name']);
-    const parent = this.fieldByLabel(dynamicLinkMetadata, ['Parent']);
-    const parentType = this.fieldByLabel(dynamicLinkMetadata, ['Parent Type', 'Parenttype']);
-    if (!linkDoctype || !linkName || !parent || !parentType) {
-      return of(directReferences);
+    const parent = { fieldname: 'parent', label: 'Parent', fieldtype: 'Link' };
+    return [
+      ...directReferences,
+      ...dynamicLinks.flatMap((record) => {
+        if (this.readValue(record, { fieldname: 'parenttype', label: 'Parent Type', fieldtype: 'Data' }) !== 'Address') {
+          return [];
+        }
+        const docName = this.readValue(record, parent);
+        return docName ? [{ docName, target: null } as AddressReference] : [];
+      }),
+    ];
+  }
+
+  private loadContactPhoneNumbers(dynamicLinks: FrappeDocument[]): Observable<ContactPhoneRecord[]> {
+    const contactNames = [...new Set(dynamicLinks.flatMap((record) => {
+      const parentType = this.readValue(record, {
+        fieldname: 'parenttype',
+        label: 'Parent Type',
+        fieldtype: 'Data',
+      });
+      const parent = this.readValue(record, { fieldname: 'parent', label: 'Parent', fieldtype: 'Link' });
+      return parentType === 'Contact' && parent ? [parent] : [];
+    }))];
+    if (!contactNames.length) {
+      return of([]);
     }
 
-    const fields = [linkDoctype, linkName, parent, parentType].map((field) => field.fieldname);
-    const filters = [
-      [linkDoctype.fieldname, '=', 'Customer'],
-      [linkName.fieldname, '=', customerName],
-      [parentType.fieldname, '=', 'Address'],
-    ];
-
-    return this.api.getList<FrappeDocument>('Dynamic Link', fields, filters, 100).pipe(
-      map((records) => [
-        ...directReferences,
-        ...records.flatMap((record) => {
-          const docName = this.readValue(record, parent);
-          return docName ? [{ docName, target: null } as AddressReference] : [];
-        }),
-      ]),
+    return forkJoin(contactNames.map((name) =>
+      this.api.getDocument<FrappeDocument>('Contact', name),
+    )).pipe(
+      map((contacts) => contacts.flatMap((contact) => this.contactPhoneRecords(contact))),
     );
+  }
+
+  private contactPhoneRecords(contact: FrappeDocument): ContactPhoneRecord[] {
+    const phoneRows = Array.isArray(contact['phone_nos'])
+      ? contact['phone_nos'].filter((row): row is FrappeDocument =>
+        typeof row === 'object' && row !== null && !Array.isArray(row),
+      )
+      : [];
+    const validPhoneRows = phoneRows.filter((row) => this.readPhone(row['phone']));
+    if (validPhoneRows.length) {
+      return validPhoneRows.map((row) => ({
+        phone: row['phone'],
+        is_primary_phone: row['is_primary_phone'],
+        is_primary_mobile: row['is_primary_mobile'],
+        is_primary_mobile_no: row['is_primary_mobile_no'],
+      }));
+    }
+
+    return [contact['phone'], contact['mobile_no']]
+      .filter((phone) => this.readPhone(phone))
+      .map((phone) => ({ phone }));
+  }
+
+  private readPhone(value: unknown): string {
+    return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
   }
 
   private toCustomerOption(
@@ -144,34 +212,67 @@ export class FrappeCustomerService {
       customer: FrappeDocument;
     },
     addresses: LoadedAddress[],
+    contactPhoneRecords: ContactPhoneRecord[],
   ): CustomerOption {
     const displayField = this.fieldByLabel(context.customerMetadata, ['Customer Name']);
     const displayName = this.readValue(context.customer, displayField) || docName;
     const taxField = this.fieldByLabel(context.customerMetadata, ['NTN', 'Tax ID']);
-    const option: CustomerOption = {
-      docName,
-      displayName,
-      billTo: { ...EMPTY_CUSTOMER_PARTY },
-      shipTo: { ...EMPTY_CUSTOMER_PARTY },
+    const personName = [
+      this.readValue(context.customer, this.fieldByLabel(context.customerMetadata, ['First Name'])),
+      this.readValue(context.customer, this.fieldByLabel(context.customerMetadata, ['Last Name'])),
+    ].filter(Boolean).join(' ');
+    const contactPhones = mapContactPhoneNumbers(contactPhoneRecords);
+    const customerDetails: CustomerPartyDetails = {
+      name: personName || displayName,
+      companyName: displayName,
+      postalAddress: '',
+      phoneNo: contactPhones.phoneNo,
+      faxNo: contactPhones.faxNo,
+      email: this.readValue(context.customer, this.fieldByLabel(context.customerMetadata, ['Email Id', 'Email'])),
+      ntn: this.readValue(context.customer, taxField),
     };
-    const assignedTargets = new Set<AddressTarget>();
+    const billToAddresses: CustomerAddressOption[] = [];
+    const shipToAddresses: CustomerAddressOption[] = [];
 
     for (const { reference, document } of addresses) {
       const target = reference.target ?? this.addressTarget(document, context.addressMetadata);
-      if (!target || assignedTargets.has(target)) {
+      if (!target) {
         continue;
       }
 
-      option[target] = this.toPartyDetails(
-        document,
-        context.addressMetadata,
-        displayName,
-        this.readValue(context.customer, taxField),
-      );
-      assignedTargets.add(target);
+      const details: CustomerPartyDetails = {
+        ...customerDetails,
+        ...this.toPartyDetails(document, context.addressMetadata, displayName, customerDetails.ntn),
+        phoneNo: contactPhones.phoneNo,
+        faxNo: contactPhones.faxNo,
+      };
+      const addressOption: CustomerAddressOption = {
+        docName: reference.docName,
+        label: this.addressLabel(document, context.addressMetadata, reference.docName, details),
+        details: {
+          ...details,
+          name: details.name || customerDetails.name,
+          phoneNo: details.phoneNo || customerDetails.phoneNo,
+          email: details.email || customerDetails.email,
+        },
+      };
+      const targetAddresses = target === 'billTo' ? billToAddresses : shipToAddresses;
+      if (!targetAddresses.some((address) => address.docName === addressOption.docName)) {
+        targetAddresses.push(addressOption);
+      }
     }
 
-    return option;
+    this.prioritizeAddress(billToAddresses, 'is_primary_address', addresses);
+    this.prioritizeAddress(shipToAddresses, 'is_shipping_address', addresses);
+
+    return {
+      docName,
+      displayName,
+      billTo: billToAddresses[0]?.details ?? customerDetails,
+      shipTo: shipToAddresses[0]?.details ?? customerDetails,
+      billToAddresses,
+      shipToAddresses,
+    };
   }
 
   private toSearchOption(record: FrappeDocument, displayField?: FrappeDocTypeField): CustomerOption {
@@ -181,6 +282,8 @@ export class FrappeCustomerService {
       displayName: this.readValue(record, displayField) || docName,
       billTo: {},
       shipTo: {},
+      billToAddresses: [],
+      shipToAddresses: [],
     };
   }
 
@@ -193,7 +296,7 @@ export class FrappeCustomerService {
     const addressLines = [
       this.readValue(address, this.fieldByLabel(metadata, ['Address Line 1', 'Address Line1'])),
       this.readValue(address, this.fieldByLabel(metadata, ['Address Line 2', 'Address Line2'])),
-      this.readValue(address, this.fieldByLabel(metadata, ['City'])),
+      this.readValue(address, this.fieldByLabel(metadata, ['City', 'City/Town'])),
       this.readValue(address, this.fieldByLabel(metadata, ['State', 'Province'])),
       this.readValue(address, this.fieldByLabel(metadata, ['Postal Code', 'Pincode', 'PIN'])),
       this.readValue(address, this.fieldByLabel(metadata, ['Country'])),
@@ -205,7 +308,7 @@ export class FrappeCustomerService {
       postalAddress: addressLines.join(', '),
       phoneNo: this.readValue(address, this.fieldByLabel(metadata, ['Phone', 'Phone No', 'Phone Number'])),
       faxNo: this.readValue(address, this.fieldByLabel(metadata, ['Fax', 'Fax No'])),
-      email: this.readValue(address, this.fieldByLabel(metadata, ['Email', 'Email Id'])),
+      email: this.readValue(address, this.fieldByLabel(metadata, ['Email', 'Email Id', 'Email Address'])),
       ntn: taxId,
     };
   }
@@ -220,6 +323,29 @@ export class FrappeCustomerService {
       return 'shipTo';
     }
     return null;
+  }
+
+  private addressLabel(
+    address: FrappeDocument,
+    metadata: FrappeDocTypeMetadata,
+    docName: string,
+    details: CustomerPartyDetails,
+  ): string {
+    const title = this.readValue(address, this.fieldByLabel(metadata, ['Address Title'])) || docName;
+    return details.postalAddress ? `${title} - ${details.postalAddress}` : title;
+  }
+
+  private prioritizeAddress(
+    options: CustomerAddressOption[],
+    preferredFieldName: string,
+    addresses: LoadedAddress[],
+  ): void {
+    const preferredNames = new Set(addresses
+      .filter(({ document }) => document[preferredFieldName] === 1 || document[preferredFieldName] === true)
+      .map(({ reference }) => reference.docName));
+    options.sort((left, right) =>
+      Number(preferredNames.has(right.docName)) - Number(preferredNames.has(left.docName)),
+    );
   }
 
   private fieldByLabel(

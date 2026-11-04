@@ -28,15 +28,15 @@
           class="relative flex h-full w-full items-center justify-center border-0 bg-transparent px-8 text-[15px] font-bold text-[#353535] cursor-pointer"
           type="button"
           aria-haspopup="listbox"
-          [attr.aria-busy]="customerDetailsLoading"
-          [attr.aria-expanded]="customerDropdownOpen"
+          [attr.aria-busy]="customerDetailsLoading()"
+          [attr.aria-expanded]="customerDropdownOpen()"
           (click)="toggleCustomerDropdown()"
           (keydown.escape)="closeCustomerDropdown()"
         >
-          <span>{{ customerDetailsLoading ? 'Loading customer...' : selectedCustomerLabel || 'Customer' }}</span>
+          <span>{{ selectedCustomerLabel() || (customerDetailsLoading() ? 'Loading customer...' : 'Customer') }}</span>
           <span class="absolute right-3 h-0 w-0 border-x-[5px] border-x-transparent border-t-[6px] border-t-[currentColor]" aria-hidden="true"></span>
         </button>
-        @if (customerDropdownOpen) {
+        @if (customerDropdownOpen()) {
           <div class="absolute z-[5] top-full -right-px -left-px min-h-12 border border-[#858585] bg-white shadow-[0_3px_8px_rgb(34_53_34_/_14%)]" role="region" aria-label="Customer search">
             <input
               class="w-full border-0 border-b border-[#c6c6c6] bg-white px-3 py-2 text-sm font-normal outline-none"
@@ -45,10 +45,10 @@
               aria-label="Search customers"
               [formControl]="customerSearch"
             />
-            @if (customerLoading) {
+            @if (customerLoading()) {
               <p class="m-0 px-3 py-3 text-left text-sm font-normal text-[#555]" role="status">Loading customers...</p>
-            } @else if (customerLoadError) {
-              <p class="m-0 px-3 py-3 text-left text-sm font-normal text-[#8b3c2c]" role="alert">{{ customerLoadError }}</p>
+            } @else if (customerLoadError()) {
+              <p class="m-0 px-3 py-3 text-left text-sm font-normal text-[#8b3c2c]" role="alert">{{ customerLoadError() }}</p>
             } @else if (filteredCustomerOptions.length) {
               <div role="listbox" aria-label="Customer options">
                 @for (customer of filteredCustomerOptions; track customer.docName) {
@@ -70,6 +70,11 @@
         }
       </div>
     </header>
+    @if (customerLoadError() && !customerDropdownOpen() && selectedCustomerLabel()) {
+      <p class="mx-auto mt-[-10px] mb-3 w-full max-w-[1120px] text-sm text-[#8b3c2c]" role="alert">
+        {{ customerLoadError() }}
+      </p>
+    }
 
     <section class="grid grid-cols-2 border border-[#a6a6a6] max-[700px]:grid-cols-1" aria-label="Order parties">
       <section class="min-w-0 pb-2" formGroupName="billTo">
@@ -84,7 +89,20 @@
         </div>
         <div class="party-field address-field">
           <label for="bill-address">POSTAL ADDRESS</label>
-          <textarea id="bill-address" rows="2" formControlName="postalAddress"></textarea>
+          @if (billingAddressOptions().length > 1) {
+            <select
+              id="bill-address"
+              aria-label="POSTAL ADDRESS"
+              [value]="selectedBillingAddress()"
+              (change)="selectBillingAddress($event)"
+            >
+              @for (address of billingAddressOptions(); track address.docName) {
+                <option [value]="address.docName">{{ address.details.postalAddress }}</option>
+              }
+            </select>
+          } @else {
+            <textarea id="bill-address" rows="2" formControlName="postalAddress"></textarea>
+          }
         </div>
         <div class="party-field">
           <label for="bill-phone">PHONE NO</label>
@@ -116,7 +134,20 @@
         </div>
         <div class="party-field address-field">
           <label for="ship-address">POSTAL ADDRESS</label>
-          <textarea id="ship-address" rows="2" formControlName="postalAddress"></textarea>
+          @if (shippingAddressOptions().length > 1) {
+            <select
+              id="ship-address"
+              aria-label="POSTAL ADDRESS"
+              [value]="selectedShippingAddress()"
+              (change)="selectShippingAddress($event)"
+            >
+              @for (address of shippingAddressOptions(); track address.docName) {
+                <option [value]="address.docName">{{ address.details.postalAddress }}</option>
+              }
+            </select>
+          } @else {
+            <textarea id="ship-address" rows="2" formControlName="postalAddress"></textarea>
+          }
         </div>
         <div class="party-field">
           <label for="ship-phone">PHONE NO</label>

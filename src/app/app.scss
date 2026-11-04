@@ -47,6 +47,18 @@
   resize: vertical;
 }
 
+.address-field select {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  color: #222;
+  font: inherit;
+  font-size: 13px;
+}
+
 .items-table th,
 .items-table td {
   height: 38px;
