@@ -21,6 +21,7 @@ export interface CustomerOption {
   shipTo: Partial<CustomerPartyDetails>;
   billToAddresses: CustomerAddressOption[];
   shipToAddresses: CustomerAddressOption[];
+  emails: string[];
 }
 
 export const EMPTY_CUSTOMER_PARTY: CustomerPartyDetails = {

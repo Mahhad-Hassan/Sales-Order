@@ -33,6 +33,9 @@ export class App {
   protected readonly shippingAddressOptions = signal<CustomerAddressOption[]>([]);
   protected readonly selectedBillingAddress = signal('');
   protected readonly selectedShippingAddress = signal('');
+  protected readonly customerEmails = signal<string[]>([]);
+  protected readonly billingEmailDropdownOpen = signal(false);
+  protected readonly shippingEmailDropdownOpen = signal(false);
   protected readonly itemRows = this.formBuilder.array<FormGroup>([this.createRow()]);
   protected readonly orderForm = this.formBuilder.group({
     customer: [''],
@@ -147,6 +150,9 @@ export class App {
       this.shippingAddressOptions.set([]);
       this.selectedBillingAddress.set('');
       this.selectedShippingAddress.set('');
+      this.customerEmails.set([]);
+      this.billingEmailDropdownOpen.set(false);
+      this.shippingEmailDropdownOpen.set(false);
     }
 
     this.orderForm.controls.customer.setValue(customer.docName);
@@ -176,6 +182,7 @@ export class App {
           }
           this.billingAddressOptions.set(details.billToAddresses);
           this.shippingAddressOptions.set(details.shipToAddresses);
+          this.customerEmails.set(details.emails);
           this.selectedBillingAddress.set(details.billToAddresses[0]?.docName ?? '');
           this.selectedShippingAddress.set(details.shipToAddresses[0]?.docName ?? '');
           this.patchPristineParty(this.orderForm.controls.billTo, details.billTo);
@@ -206,6 +213,17 @@ export class App {
       this.selectedShippingAddress.set(address.docName);
       this.orderForm.controls.shipTo.patchValue(address.details, { emitEvent: false });
     }
+  }
+
+  protected toggleEmailDropdown(party: 'billTo' | 'shipTo'): void {
+    const dropdown = party === 'billTo' ? this.billingEmailDropdownOpen : this.shippingEmailDropdownOpen;
+    dropdown.update((open) => !open);
+  }
+
+  protected selectEmail(party: 'billTo' | 'shipTo', email: string): void {
+    const group = party === 'billTo' ? this.orderForm.controls.billTo : this.orderForm.controls.shipTo;
+    group.controls.email.setValue(email);
+    (party === 'billTo' ? this.billingEmailDropdownOpen : this.shippingEmailDropdownOpen).set(false);
   }
 
   protected logoutFromFrappe(): void {

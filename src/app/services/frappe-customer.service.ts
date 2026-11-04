@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { forkJoin, map, Observable, of, shareReplay, switchMap } from 'rxjs';
 import { CustomerAddressOption, CustomerOption, CustomerPartyDetails } from '../models/customer-option.model';
+import { ContactEmailRecord, mapContactEmails } from '../models/customer-email.mapper';
 import { FrappeDocTypeField, FrappeDocTypeMetadata } from '../models/frappe-api.model';
 import { ContactPhoneRecord, mapContactPhoneNumbers } from '../models/customer-phone.mapper';
 import { FrappeApiService } from './frappe-api.service';
@@ -20,6 +21,12 @@ interface LoadedAddress {
 
 interface DynamicLinkRecord {
   name: string;
+}
+
+interface CustomerContactDetails {
+  phoneRecords: ContactPhoneRecord[];
+  emails: string[];
+  primaryEmail: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -64,10 +71,10 @@ export class FrappeCustomerService {
             context.customer,
             dynamicLinks,
           ),
-          contactPhoneNumbers: this.loadContactPhoneNumbers(dynamicLinks),
+          contactDetails: this.loadContactDetails(dynamicLinks),
         }).pipe(
-          map(({ addresses, contactPhoneNumbers }) =>
-            this.toCustomerOption(docName, context, addresses, contactPhoneNumbers),
+          map(({ addresses, contactDetails }) =>
+            this.toCustomerOption(docName, context, addresses, contactDetails),
           ),
         )),
       )),
@@ -158,7 +165,7 @@ export class FrappeCustomerService {
     ];
   }
 
-  private loadContactPhoneNumbers(dynamicLinks: FrappeDocument[]): Observable<ContactPhoneRecord[]> {
+  private loadContactDetails(dynamicLinks: FrappeDocument[]): Observable<CustomerContactDetails> {
     const contactNames = [...new Set(dynamicLinks.flatMap((record) => {
       const parentType = this.readValue(record, {
         fieldname: 'parenttype',
@@ -169,13 +176,18 @@ export class FrappeCustomerService {
       return parentType === 'Contact' && parent ? [parent] : [];
     }))];
     if (!contactNames.length) {
-      return of([]);
+      return of({ phoneRecords: [], emails: [], primaryEmail: '' });
     }
 
     return forkJoin(contactNames.map((name) =>
       this.api.getDocument<FrappeDocument>('Contact', name),
     )).pipe(
-      map((contacts) => contacts.flatMap((contact) => this.contactPhoneRecords(contact))),
+      map((contacts) => {
+        const phoneRecords = contacts.flatMap((contact) => this.contactPhoneRecords(contact));
+        const emailRecords = contacts.flatMap((contact) => this.contactEmailRecords(contact));
+        const { emails, primaryEmail } = mapContactEmails(emailRecords);
+        return { phoneRecords, emails, primaryEmail };
+      }),
     );
   }
 
@@ -200,6 +212,21 @@ export class FrappeCustomerService {
       .map((phone) => ({ phone }));
   }
 
+  private contactEmailRecords(contact: FrappeDocument): ContactEmailRecord[] {
+    const emailRows = Array.isArray(contact['email_ids'])
+      ? contact['email_ids'].filter((row): row is FrappeDocument =>
+        typeof row === 'object' && row !== null && !Array.isArray(row),
+      )
+      : [];
+    return [
+      ...emailRows.map((row) => ({
+        email_id: row['email_id'],
+        is_primary: row['is_primary'],
+      })),
+      { email_id: contact['email_id'] },
+    ];
+  }
+
   private readPhone(value: unknown): string {
     return typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
   }
@@ -212,7 +239,7 @@ export class FrappeCustomerService {
       customer: FrappeDocument;
     },
     addresses: LoadedAddress[],
-    contactPhoneRecords: ContactPhoneRecord[],
+    contactDetails: CustomerContactDetails,
   ): CustomerOption {
     const displayField = this.fieldByLabel(context.customerMetadata, ['Customer Name']);
     const displayName = this.readValue(context.customer, displayField) || docName;
@@ -221,14 +248,14 @@ export class FrappeCustomerService {
       this.readValue(context.customer, this.fieldByLabel(context.customerMetadata, ['First Name'])),
       this.readValue(context.customer, this.fieldByLabel(context.customerMetadata, ['Last Name'])),
     ].filter(Boolean).join(' ');
-    const contactPhones = mapContactPhoneNumbers(contactPhoneRecords);
+    const contactPhones = mapContactPhoneNumbers(contactDetails.phoneRecords);
     const customerDetails: CustomerPartyDetails = {
       name: personName || displayName,
       companyName: displayName,
       postalAddress: '',
       phoneNo: contactPhones.phoneNo,
       faxNo: contactPhones.faxNo,
-      email: this.readValue(context.customer, this.fieldByLabel(context.customerMetadata, ['Email Id', 'Email'])),
+      email: contactDetails.primaryEmail,
       ntn: this.readValue(context.customer, taxField),
     };
     const billToAddresses: CustomerAddressOption[] = [];
@@ -245,6 +272,7 @@ export class FrappeCustomerService {
         ...this.toPartyDetails(document, context.addressMetadata, displayName, customerDetails.ntn),
         phoneNo: contactPhones.phoneNo,
         faxNo: contactPhones.faxNo,
+        email: contactDetails.primaryEmail,
       };
       const addressOption: CustomerAddressOption = {
         docName: reference.docName,
@@ -272,6 +300,7 @@ export class FrappeCustomerService {
       shipTo: shipToAddresses[0]?.details ?? customerDetails,
       billToAddresses,
       shipToAddresses,
+      emails: contactDetails.emails,
     };
   }
 
@@ -284,6 +313,7 @@ export class FrappeCustomerService {
       shipTo: {},
       billToAddresses: [],
       shipToAddresses: [],
+      emails: [],
     };
   }
 

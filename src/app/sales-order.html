@@ -114,7 +114,31 @@
         </div>
         <div class="party-field">
           <label for="bill-email">EMAIL</label>
-          <input id="bill-email" type="text" formControlName="email" />
+          <div class="email-field-value">
+            <input id="bill-email" type="text" formControlName="email" />
+            @if (customerEmails().length > 1) {
+              <button
+                class="email-dropdown-toggle"
+                type="button"
+                aria-label="Choose billing email"
+                [attr.aria-expanded]="billingEmailDropdownOpen()"
+                (click)="toggleEmailDropdown('billTo')"
+              ></button>
+              @if (billingEmailDropdownOpen()) {
+                <div class="email-dropdown" role="listbox" aria-label="Billing email options">
+                  @for (email of customerEmails(); track email) {
+                    <button
+                      type="button"
+                      role="option"
+                      [class.selected-email]="orderForm.controls.billTo.controls.email.value === email"
+                      [attr.aria-selected]="orderForm.controls.billTo.controls.email.value === email"
+                      (click)="selectEmail('billTo', email)"
+                    >{{ email }}</button>
+                  }
+                </div>
+              }
+            }
+          </div>
         </div>
         <div class="party-field">
           <label for="bill-ntn">NTN</label>
@@ -159,7 +183,31 @@
         </div>
         <div class="party-field">
           <label for="ship-email">EMAIL</label>
-          <input id="ship-email" type="text" formControlName="email" />
+          <div class="email-field-value">
+            <input id="ship-email" type="text" formControlName="email" />
+            @if (customerEmails().length > 1) {
+              <button
+                class="email-dropdown-toggle"
+                type="button"
+                aria-label="Choose shipping email"
+                [attr.aria-expanded]="shippingEmailDropdownOpen()"
+                (click)="toggleEmailDropdown('shipTo')"
+              ></button>
+              @if (shippingEmailDropdownOpen()) {
+                <div class="email-dropdown" role="listbox" aria-label="Shipping email options">
+                  @for (email of customerEmails(); track email) {
+                    <button
+                      type="button"
+                      role="option"
+                      [class.selected-email]="orderForm.controls.shipTo.controls.email.value === email"
+                      [attr.aria-selected]="orderForm.controls.shipTo.controls.email.value === email"
+                      (click)="selectEmail('shipTo', email)"
+                    >{{ email }}</button>
+                  }
+                </div>
+              }
+            }
+          </div>
         </div>
         <div class="party-field">
           <label for="ship-ntn">NTN</label>
