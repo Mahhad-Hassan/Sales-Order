@@ -1,0 +1,54 @@
+<main class="min-h-screen bg-[#eef1eb] px-4 py-10 sm:flex sm:items-center sm:justify-center sm:px-6">
+  <section class="mx-auto w-full max-w-[420px] border border-[#d1d8cc] bg-white px-6 py-8 shadow-[0_8px_28px_rgb(34_53_34_/_10%)] sm:px-9 sm:py-10">
+    <header class="mb-8 text-center">
+      <img class="mx-auto mb-4 h-[76px] w-auto object-contain" src="/AgroVisions%20Logo.png" alt="AgroVisions logo" />
+      <h1 class="m-0 text-[26px] font-bold text-[#355224]">AgroVisions</h1>
+      <p class="mb-0 mt-2 text-sm text-[#62685f]">Sales Order Management System</p>
+    </header>
+
+    <form class="grid gap-5" [formGroup]="loginForm" (ngSubmit)="submit()">
+      <label class="grid gap-2 text-sm font-semibold text-[#333a31]">
+        Username or Email
+        <input
+          class="h-11 w-full rounded-sm border border-[#b8c0b1] bg-white px-3 text-base font-normal text-[#222] outline-none transition focus:border-[#55763e] focus:ring-2 focus:ring-[#55763e]/20 disabled:bg-[#f1f3ef]"
+          type="text"
+          autocomplete="username"
+          formControlName="username"
+        />
+      </label>
+
+      <label class="grid gap-2 text-sm font-semibold text-[#333a31]">
+        Password
+        <span class="relative block">
+          <input
+            class="h-11 w-full rounded-sm border border-[#b8c0b1] bg-white px-3 pr-16 text-base font-normal text-[#222] outline-none transition focus:border-[#55763e] focus:ring-2 focus:ring-[#55763e]/20 disabled:bg-[#f1f3ef]"
+            [type]="passwordVisible ? 'text' : 'password'"
+            autocomplete="current-password"
+            formControlName="password"
+          />
+          <button
+            class="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-[#466536] hover:text-[#283e1d] focus-visible:outline-2 focus-visible:outline-[#55763e] disabled:opacity-50"
+            type="button"
+            [attr.aria-label]="passwordVisible ? 'Hide password' : 'Show password'"
+            [disabled]="loading"
+            (click)="togglePasswordVisibility()"
+          >
+            {{ passwordVisible ? 'Hide' : 'Show' }}
+          </button>
+        </span>
+      </label>
+
+      @if (errorMessage) {
+        <p class="m-0 border border-[#e4b7aa] bg-[#fff4f0] px-3 py-2 text-sm text-[#8b3c2c]" role="alert">{{ errorMessage }}</p>
+      }
+
+      <button
+        class="mt-1 inline-flex h-11 items-center justify-center rounded-sm border border-[#54723f] bg-[#5b7847] px-4 text-sm font-bold text-white transition hover:bg-[#486436] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#355224] disabled:cursor-wait disabled:opacity-60"
+        type="submit"
+        [disabled]="loading || loginForm.invalid"
+      >
+        {{ loading ? 'Signing in...' : 'Sign in' }}
+      </button>
+    </form>
+  </section>
+</main>
