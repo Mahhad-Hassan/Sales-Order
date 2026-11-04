@@ -1,16 +1,37 @@
 <main class="page-shell">
   <form class="order-sheet" [formGroup]="orderForm">
     <header class="sheet-header">
-      <div class="brand">AGROVISIONS</div>
-      <label class="field date-field">
-        <span class="field-label date-label">Date</span>
-        <input aria-label="Date" type="date" formControlName="date" />
-      </label>
+      <div class="brand">
+        <span>AGROVISIONS</span>
+        <img src="/AgroVisions%20Logo.png" alt="AgroVisions logo" />
+      </div>
+<div class="field date-field">
+  <label class="field-label date-label" for="order-date">Date:</label>
+  <input
+    id="order-date"
+    aria-label="Date"
+    lang="en-US"
+    type="date"
+    formControlName="date"
+  />
+</div>
       <div class="document-title">Sales Order (V4)</div>
-      <label class="field customer-field">
-        <span class="field-label">Customer</span>
-        <input aria-label="Customer" type="text" formControlName="customer" />
-      </label>
+      <div class="customer-field">
+        <button
+          class="customer-trigger"
+          type="button"
+          aria-haspopup="listbox"
+          [attr.aria-expanded]="customerDropdownOpen"
+          (click)="toggleCustomerDropdown()"
+          (keydown.escape)="closeCustomerDropdown()"
+        >
+          <span>Customer</span>
+          <span class="dropdown-arrow" aria-hidden="true"></span>
+        </button>
+        @if (customerDropdownOpen) {
+          <div class="customer-dropdown" role="listbox" aria-label="Customer options"></div>
+        }
+      </div>
     </header>
 
     <section class="party-grid" aria-label="Order parties">

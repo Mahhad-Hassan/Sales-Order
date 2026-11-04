@@ -10,6 +10,7 @@ import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular
 export class App {
   private readonly formBuilder = inject(FormBuilder);
 
+  protected customerDropdownOpen = false;
   protected readonly itemRows = this.formBuilder.array<FormGroup>([this.createRow()]);
   protected readonly orderForm = this.formBuilder.group({
     customer: [''],
@@ -52,6 +53,14 @@ export class App {
 
   protected addRow(): void {
     this.itemRows.push(this.createRow());
+  }
+
+  protected toggleCustomerDropdown(): void {
+    this.customerDropdownOpen = !this.customerDropdownOpen;
+  }
+
+  protected closeCustomerDropdown(): void {
+    this.customerDropdownOpen = false;
   }
 
   protected removeRow(index: number): void {
