@@ -1,0 +1,161 @@
+<main class="page-shell">
+  <form class="order-sheet" [formGroup]="orderForm">
+    <header class="sheet-header">
+      <div class="brand">AGROVISIONS</div>
+      <label class="field date-field">
+        <span class="field-label date-label">Date</span>
+        <input aria-label="Date" type="date" formControlName="date" />
+      </label>
+      <div class="document-title">Sales Order (V4)</div>
+      <label class="field customer-field">
+        <span class="field-label">Customer</span>
+        <input aria-label="Customer" type="text" formControlName="customer" />
+      </label>
+    </header>
+
+    <section class="party-grid" aria-label="Order parties">
+      <section class="party-panel" formGroupName="billTo">
+        <h2 class="party-title">BILL TO:</h2>
+        <div class="party-field">
+          <label for="bill-name">NAME</label>
+          <input id="bill-name" type="text" formControlName="name" />
+        </div>
+        <div class="party-field">
+          <label for="bill-company">COMPANY NAME</label>
+          <input id="bill-company" type="text" formControlName="companyName" />
+        </div>
+        <div class="party-field address-field">
+          <label for="bill-address">POSTAL ADDRESS</label>
+          <textarea id="bill-address" rows="2" formControlName="postalAddress"></textarea>
+        </div>
+        <div class="party-field">
+          <label for="bill-phone">PHONE NO</label>
+          <input id="bill-phone" type="text" formControlName="phoneNo" />
+        </div>
+        <div class="party-field">
+          <label for="bill-fax">FAX NO</label>
+          <input id="bill-fax" type="text" formControlName="faxNo" />
+        </div>
+        <div class="party-field">
+          <label for="bill-email">EMAIL</label>
+          <input id="bill-email" type="text" formControlName="email" />
+        </div>
+        <div class="party-field">
+          <label for="bill-ntn">NTN</label>
+          <input id="bill-ntn" type="text" formControlName="ntn" />
+        </div>
+      </section>
+
+      <section class="party-panel" formGroupName="shipTo">
+        <h2 class="party-title">SHIP TO:</h2>
+        <div class="party-field">
+          <label for="ship-name">NAME</label>
+          <input id="ship-name" type="text" formControlName="name" />
+        </div>
+        <div class="party-field">
+          <label for="ship-company">COMPANY NAME</label>
+          <input id="ship-company" type="text" formControlName="companyName" />
+        </div>
+        <div class="party-field address-field">
+          <label for="ship-address">POSTAL ADDRESS</label>
+          <textarea id="ship-address" rows="2" formControlName="postalAddress"></textarea>
+        </div>
+        <div class="party-field">
+          <label for="ship-phone">PHONE NO</label>
+          <input id="ship-phone" type="text" formControlName="phoneNo" />
+        </div>
+        <div class="party-field">
+          <label for="ship-fax">FAX NO</label>
+          <input id="ship-fax" type="text" formControlName="faxNo" />
+        </div>
+        <div class="party-field">
+          <label for="ship-email">EMAIL</label>
+          <input id="ship-email" type="text" formControlName="email" />
+        </div>
+        <div class="party-field">
+          <label for="ship-ntn">NTN</label>
+          <input id="ship-ntn" type="text" formControlName="ntn" />
+        </div>
+      </section>
+    </section>
+
+    <section class="terms-grid" aria-label="Order dates and terms">
+      <label class="field terms-field">
+        <span class="field-label">DELIVERY DATE</span>
+        <input type="text" aria-label="Delivery date" formControlName="deliveryDate" />
+      </label>
+      <label class="field terms-field">
+        <span class="field-label">DUE DATE</span>
+        <input type="text" aria-label="Due date" formControlName="dueDate" />
+      </label>
+      <label class="field terms-field">
+        <span class="field-label">PAYMENT TERMS</span>
+        <input type="text" aria-label="Payment terms" formControlName="paymentTerms" />
+      </label>
+      <label class="field terms-field">
+        <span class="field-label">INCOTERM</span>
+        <input type="text" aria-label="Incoterm" formControlName="incoterm" />
+      </label>
+    </section>
+
+    <section class="items-section" aria-label="Quantity">
+      <div class="table-scroll">
+        <table class="items-table">
+          <colgroup>
+            <col class="col-quantity-a" />
+            <col class="col-quantity-b" />
+            <col class="col-unit" />
+            <col class="col-product-a" />
+            <col class="col-product-b" />
+            <col class="col-product-c" />
+            <col class="col-price-a" />
+            <col class="col-price-b" />
+            <col class="col-total-a" />
+            <col class="col-total-b" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th colspan="2">Quantity</th>
+              <th>Unit</th>
+              <th colspan="3">Product Name</th>
+              <th colspan="2">Unit Price</th>
+              <th colspan="2">Total</th>
+            </tr>
+          </thead>
+          <tbody formArrayName="items">
+            @for (row of itemRows.controls; track $index; let rowIndex = $index) {
+              <tr [formGroupName]="rowIndex">
+                <td colspan="2"><input aria-label="Quantity" type="text" formControlName="quantity" /></td>
+                <td><input aria-label="Unit" type="text" formControlName="unit" /></td>
+                <td colspan="3"><input aria-label="Product Name" type="text" formControlName="productName" /></td>
+                <td colspan="2"><input aria-label="Unit Price" type="text" formControlName="unitPrice" /></td>
+                <td colspan="2">
+                  <div class="total-cell">
+                    <input aria-label="Total" type="text" formControlName="total" />
+                    @if (rowIndex > 0) {
+                      <button class="remove-button" type="button" aria-label="Remove Row" (click)="removeRow(rowIndex)">
+                        Remove
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="balance-row">
+              <td colspan="4" class="balance-spacer"></td>
+              <th colspan="4" class="balance-label">TOTAL BALANCE INCLUDING TAX</th>
+              <td colspan="2" class="balance-value">
+                <input aria-label="Total balance including tax" type="text" formControlName="totalBalanceIncludingTax" />
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="table-actions">
+        <button class="add-button" type="button" (click)="addRow()"><span aria-hidden="true">+</span> Add Row</button>
+      </div>
+    </section>
+  </form>
+</main>
