@@ -9,6 +9,7 @@ import {
   SalesOrderListOption,
   SalesOrderRecord,
   SellingPriceListOption,
+  WarehouseOption,
 } from '../models/sales-order.model';
 import { FrappeDocTypeMetadata } from '../models/frappe-api.model';
 import { FrappeApiService } from './frappe-api.service';
@@ -20,6 +21,7 @@ export class FrappeSalesOrderService {
 
   loadOptions(): Observable<{
     companies: CompanyOption[];
+    warehouses: WarehouseOption[];
     incoterms: IncotermOption[];
     items: SalesOrderItemOption[];
     paymentTerms: PaymentTermOption[];
@@ -33,6 +35,12 @@ export class FrappeSalesOrderService {
         ['name', 'default_currency'],
         [],
         500,
+      ),
+      warehouses: this.api.getList<WarehouseOption>(
+        'Warehouse',
+        ['name', 'warehouse_name', 'company', 'is_group', 'disabled'],
+        [['disabled', '=', 0], ['is_group', '=', 0]],
+        1000,
       ),
       incoterms: this.api.getList<IncotermOption>('Incoterm', ['name', 'title'], [], 500),
       items: this.api.getList<SalesOrderItemOption>(

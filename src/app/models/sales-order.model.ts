@@ -16,6 +16,14 @@ export interface CompanyOption {
   default_currency: string;
 }
 
+export interface WarehouseOption {
+  name: string;
+  warehouse_name: string;
+  company: string;
+  is_group: number;
+  disabled: number;
+}
+
 export interface SellingPriceListOption {
   name: string;
   currency: string;
@@ -30,6 +38,7 @@ export interface SalesOrderItemRecord {
   qty: number;
   uom?: string;
   stock_uom?: string;
+  warehouse?: string | null;
   rate: number;
   discount_amount?: number;
   amount?: number;

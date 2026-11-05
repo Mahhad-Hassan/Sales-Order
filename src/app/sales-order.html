@@ -44,6 +44,20 @@
       </div>
 
       <form class="mx-auto w-full max-w-[1120px] px-[clamp(0px,1vw,10px)]" [formGroup]="orderForm">
+    <label class="mb-4 flex max-w-[520px] flex-col gap-[6px] text-sm font-bold text-[#43564f]" for="source-warehouse">
+      <span>Source Warehouse</span>
+      <select
+        id="source-warehouse"
+        class="min-h-11 w-full rounded-lg border border-[#e0e8e4] bg-white px-3 py-[9px] text-base font-normal text-[#253b34] outline-none focus:border-[#70ae97] focus:shadow-[0_0_0_3px_rgba(62,153,120,0.1)] disabled:cursor-not-allowed disabled:bg-[#f8faf9]"
+        aria-label="Source Warehouse"
+        formControlName="sourceWarehouse"
+      >
+        <option value="">{{ optionsLoading() ? 'Loading warehouses...' : 'Select source warehouse...' }}</option>
+        @for (warehouse of warehouses(); track warehouse.name) {
+          <option [value]="warehouse.name">{{ warehouse.name }}</option>
+        }
+      </select>
+    </label>
     <header class="mb-[18px] grid grid-cols-[1.09fr_1.29fr_repeat(4,1fr)_1.29fr_repeat(3,1fr)] grid-rows-[74px_48px] max-[700px]:grid-rows-[62px_44px]">
       <div class="col-[1/7] row-[1/2] flex items-center gap-3 pl-1 font-[Arial,sans-serif] text-4xl font-bold text-[#355224] max-[700px]:text-[28px]">
         <span>AGROVISIONS</span>

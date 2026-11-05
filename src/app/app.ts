@@ -15,6 +15,7 @@ import {
   SalesOrderRecord,
   SalesOrderTaxRecord,
   SellingPriceListOption,
+  WarehouseOption,
 } from './models/sales-order.model';
 import { FrappeAuthService } from './services/frappe-auth.service';
 import { FrappeCustomerService } from './services/frappe-customer.service';
@@ -81,6 +82,7 @@ export class App {
   protected readonly billingEmailDropdownOpen = signal(false);
   protected readonly shippingEmailDropdownOpen = signal(false);
   protected readonly companies = signal<CompanyOption[]>([]);
+  protected readonly warehouses = signal<WarehouseOption[]>([]);
   protected readonly priceLists = signal<SellingPriceListOption[]>([]);
   protected readonly incoterms = signal<IncotermOption[]>([]);
   protected readonly paymentTerms = signal<PaymentTermOption[]>([]);
@@ -100,6 +102,7 @@ export class App {
   protected readonly orderForm = this.formBuilder.group({
     customer: [''],
     date: [this.today()],
+    sourceWarehouse: [''],
     company: [''],
     sellingPriceList: [''],
     billTo: this.formBuilder.group({
@@ -296,6 +299,7 @@ export class App {
       const qty = Number(quantityValue);
       const hasRate = typeof rateValue === 'string' && rateValue.trim().length > 0;
       const rate = hasRate ? Number(rateValue) : undefined;
+      const savedItem = this.loadedSalesOrderSnapshot?.items[index];
       if (!item || !Number.isFinite(qty) || qty <= 0
         || (hasRate && (!Number.isFinite(rate) || Number(rate) < 0))) {
         this.orderError.set(`Enter a valid product, positive quantity, and non-negative unit price on item row ${index + 1}.`);
@@ -311,6 +315,9 @@ export class App {
         qty,
         uom: unit,
         stock_uom: item.stock_uom,
+        warehouse: this.orderForm.controls.sourceWarehouse.value
+          || (savedItem?.item_code === item.item_code ? savedItem.warehouse : undefined)
+          || undefined,
         ...(rate === undefined ? {} : { rate }),
       });
     }
@@ -424,6 +431,9 @@ export class App {
     this.salesOrders.loadOptions().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (options) => {
         this.companies.set(options.companies);
+        this.warehouses.set(options.warehouses.filter((warehouse) =>
+          warehouse.disabled === 0 && warehouse.is_group === 0,
+        ));
         this.incoterms.set(mergeUniqueByName(options.incoterms, this.incoterms()));
         this.orderItems.set(options.items);
         this.paymentTerms.set(mergeUniqueByName(options.paymentTerms, this.paymentTerms()));
@@ -516,6 +526,7 @@ export class App {
         this.orderForm.patchValue({
           customer: order.customer,
           date: formatDateForInput(order.transaction_date),
+          sourceWarehouse: this.getCommonItemWarehouse(order.items ?? []),
           deliveryDate: formatDateForInput(order.delivery_date),
           dueDate: formatDateForInput(order.payment_schedule?.[0]?.due_date),
           incoterm: order.incoterm ?? '',
@@ -597,6 +608,7 @@ export class App {
     this.orderForm.reset({
       customer: '',
       date: this.today(),
+      sourceWarehouse: '',
       company: '',
       sellingPriceList: '',
       deliveryDate: '',
@@ -831,6 +843,16 @@ export class App {
       this.itemRows.removeAt(this.itemRows.length - 1);
     }
     this.updateItemTotals();
+  }
+
+  private getCommonItemWarehouse(items: SalesOrderRecord['items']): string {
+    if (!items.length) {
+      return '';
+    }
+    const firstWarehouse = items[0].warehouse?.trim() ?? '';
+    return items.every((item) => (item.warehouse?.trim() ?? '') === firstWarehouse)
+      ? firstWarehouse
+      : '';
   }
 
   private updateOrderOption(order: SalesOrderRecord): void {
