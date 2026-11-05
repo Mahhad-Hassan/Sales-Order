@@ -1,10 +1,10 @@
-<div class="min-h-screen [background:radial-gradient(ellipse_at_90%_0,rgba(210,235,227,0.38),transparent_34rem),#f5f7f6]">
-  <header class="relative flex min-h-[78px] items-center justify-center border-b border-[#e8eeeb] bg-white px-[clamp(20px,5vw,76px)] max-[580px]:min-h-[68px] max-[580px]:px-4">
-    <a class="inline-flex items-center gap-3 text-[#173c36] no-underline" routerLink="/sales-orders" aria-label="Sales Orders home">
-      <img class="h-[48px] w-auto object-contain" src="/AgroVisions%20Logo.png" alt="" />
+<div class="sales-order-page min-h-screen">
+  <header class="sales-order-topbar relative flex min-h-[72px] items-center justify-between border-b px-[clamp(20px,5vw,76px)] max-[580px]:min-h-[68px] max-[580px]:px-4">
+    <a class="sales-order-brand inline-flex items-center gap-3 no-underline" routerLink="/sales-orders" aria-label="Sales Orders home">
+      <span class="sales-order-logo" aria-hidden="true">AV</span>
       <span class="text-left">
-        <strong class="block text-[22px] font-extrabold leading-tight">AGROVISIONS</strong>
-        <small class="mt-1 block text-sm text-[#82918c]">Sales Order Management</small>
+        <strong class="block text-[18px] font-extrabold leading-tight">AGROVISIONS</strong>
+        <small class="mt-1 block text-xs">Sales Order Management</small>
       </span>
     </a>
     @if (currentUser) {
@@ -19,65 +19,68 @@
     }
   </header>
 
-  <main class="w-full px-4 pb-7 pt-8 max-[580px]:[padding:28px_14px_24px]">
-    <section class="mb-7 flex justify-center text-center max-[580px]:mb-5">
-      <div>
-        <p class="m-0 text-[16px] font-extrabold tracking-[0.3px] text-[#399477]">Sales Order Management</p>
-        <h1 class="my-[5px] text-[clamp(30px,calc(3vw+10px),42px)] font-extrabold leading-[1.35] tracking-[-0.5px] text-[#1c332d]">
-          {{ isExistingOrder() ? 'Sales Order Details' : 'New Sales Order' }}
-        </h1>
-        <p class="m-0 text-base text-[#71807a]">Create, review, and manage Sales Orders.</p>
+  <section class="sales-order-hero px-[clamp(20px,5vw,76px)] pt-7 pb-[76px] text-white max-[700px]:px-4 max-[700px]:pt-6 max-[700px]:pb-[68px]">
+    <div class="mx-auto w-full max-w-[1440px]">
+      <p class="m-0 text-[13px] text-white/75">Sales Orders <span class="px-1" aria-hidden="true">›</span> {{ isExistingOrder() ? 'Details' : 'New' }}</p>
+      <div class="mt-2 flex items-end justify-between gap-5 max-[700px]:items-start">
+        <div>
+          <h1 class="m-0 text-[clamp(28px,4vw,36px)] font-extrabold leading-tight">{{ isExistingOrder() ? 'Sales Order Details' : 'New Sales Order' }}</h1>
+          <p class="mt-2 mb-0 text-sm text-white/80">Create, review, and manage Sales Orders.</p>
+        </div>
+        <span class="shrink-0 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold">{{ isExistingOrder() ? currentOrderName() : 'New Sales Order' }}</span>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="opened-record panel mt-[18px] rounded-[15px] border border-[#e7ece9] bg-white p-[clamp(18px,3vw,32px)] shadow-[0_8px_26px_rgba(34,57,48,0.035)]">
-      <div class="opened-record-toolbar mb-5 flex items-center justify-between gap-[14px] border-b border-[#edf0ee] pb-4">
+  <main class="sales-order-content w-full px-4 pb-8 max-[580px]:px-3">
+    <section class="opened-record mx-auto -mt-12 w-full max-w-[1440px]">
+      <div class="opened-record-toolbar mb-5 flex items-center justify-between gap-4 rounded-2xl border bg-white p-4 shadow-sm max-[700px]:flex-wrap">
         <button
-          class="inline-flex min-h-[42px] cursor-pointer items-center gap-2 rounded-lg border border-[#dfe9e4] bg-[#f7fbf9] px-[13px] py-2 text-sm text-[#267c61] hover:border-[#79b9a2] hover:bg-[#f0f8f4]"
+          class="toolbar-back inline-flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[10px] border px-[13px] py-2 text-sm font-semibold"
           type="button"
           aria-label="Back to Sales Orders"
           (click)="backToSalesOrders()"
         ><span aria-hidden="true">←</span> Back to Sales Orders</button>
-        <span class="rounded-[20px] bg-[#f0f3f2] px-[10px] py-[6px] text-sm font-bold text-[#60716a]">
-          {{ isExistingOrder() ? currentOrderName() : 'New Sales Order' }}
-        </span>
+        <div class="flex flex-wrap items-center justify-end gap-2 max-[700px]:w-full max-[700px]:justify-start">
+          <label class="sr-only" for="existing-order">Open existing Sales Order</label>
+          <select
+            id="existing-order"
+            class="toolbar-select min-h-[42px] max-w-full rounded-[10px] border px-3 text-sm"
+            aria-label="Open existing Sales Order"
+            [value]="currentOrderName()"
+            [disabled]="optionsLoading() || orderLoading()"
+            (change)="loadExistingOrder($event)"
+          >
+            <option value="" [selected]="!currentOrderName()">Open existing Sales Order...</option>
+            @if (currentOrderName()) {
+              <option [value]="currentOrderName()" selected>
+                {{ currentOrderName() }}
+                @if (currentSalesOrderOption; as order) {
+                  — {{ order.customer }} ({{ order.transaction_date }})
+                }
+              </option>
+            }
+            @for (order of otherSalesOrderOptions; track order.name) {
+              <option [value]="order.name">{{ order.name }} — {{ order.customer }} ({{ order.transaction_date }})</option>
+            }
+          </select>
+          <button
+            class="new-order-button min-h-[42px] rounded-[10px] border px-4 text-sm font-bold cursor-pointer"
+            type="button"
+            (click)="startNewOrder()"
+          >New Order</button>
+        </div>
       </div>
 
-      <form class="w-full px-[clamp(0px,1vw,10px)]" [formGroup]="orderForm">
-    <label class="mb-4 flex max-w-[520px] flex-col gap-[6px] text-sm font-bold text-[#43564f]" for="source-warehouse">
-      <span>Source Warehouse</span>
-      <select
-        id="source-warehouse"
-        class="min-h-11 w-full rounded-lg border border-[#e0e8e4] bg-white px-3 py-[9px] text-base font-normal text-[#253b34] outline-none focus:border-[#70ae97] focus:shadow-[0_0_0_3px_rgba(62,153,120,0.1)] disabled:cursor-not-allowed disabled:bg-[#f8faf9]"
-        aria-label="Source Warehouse"
-        formControlName="sourceWarehouse"
-      >
-        <option value="">{{ optionsLoading() ? 'Loading warehouses...' : 'Select source warehouse...' }}</option>
-        @for (warehouse of warehouses(); track warehouse.name) {
-          <option [value]="warehouse.name">{{ warehouse.name }}</option>
-        }
-      </select>
-    </label>
-    <header class="mb-[18px] grid grid-cols-[1.09fr_1.29fr_repeat(4,1fr)_1.29fr_repeat(3,1fr)] grid-rows-[74px_48px] max-[700px]:grid-rows-[62px_44px]">
-      <div class="col-[1/7] row-[1/2] flex items-center gap-3 pl-1 font-[Arial,sans-serif] text-4xl font-bold text-[#355224] max-[700px]:text-[28px]">
-        <span>AGROVISIONS</span>
-        <img class="block h-[74px] w-auto object-contain" src="/AgroVisions%20Logo.png" alt="AgroVisions logo" />
-      </div>
-<div class="col-[9/11] row-[1/3] flex h-[38px] min-w-0 items-center gap-[5px] self-end overflow-hidden border border-[#a6a6a6] bg-white px-2 max-[700px]:gap-[3px] max-[700px]:px-1">
-  <label class="inline-flex shrink-0 items-center whitespace-nowrap text-xs font-bold max-[700px]:text-[10px]" for="order-date">Date:</label>
-  <input
-    id="order-date"
-    aria-label="Date"
-    lang="en-US"
-    type="date"
-    formControlName="date"
-    class="h-[30px] min-h-0 min-w-0 w-0 flex-1 border-0 bg-transparent p-0 text-xs max-[700px]:h-7 max-[700px]:text-[10px]"
-  />
-</div>
-      <div class="col-[1/4] row-[2/3] flex min-w-0 items-center border border-[#858585] px-[10px] text-[18px] font-bold text-[#353535] max-[700px]:px-[6px] max-[700px]:text-sm">Sales Order (V4)</div>
-      <div class="customer-field relative col-[4/7] row-[2/3] min-w-0 border border-[#858585] p-0 text-[18px] font-bold text-[#353535] max-[700px]:px-[6px] max-[700px]:text-sm">
+      <form class="sales-order-form w-full" [formGroup]="orderForm">
+    <section class="form-card order-information-card" aria-label="Order Information">
+      <h2 class="form-section-title"><i aria-hidden="true"></i>Order Information</h2>
+      <div class="order-info-grid">
+        <div class="form-field">
+          <span class="form-field-label">Customer</span>
+          <div class="customer-field relative">
         <button
-          class="relative flex h-full w-full items-center justify-center border-0 bg-transparent px-8 text-[15px] font-bold text-[#353535] cursor-pointer"
+          class="customer-select relative flex min-h-[44px] w-full items-center justify-between rounded-[10px] border px-3 text-left text-sm font-normal cursor-pointer"
           type="button"
           aria-haspopup="listbox"
           [attr.aria-busy]="customerDetailsLoading()"
@@ -86,13 +89,13 @@
           (click)="toggleCustomerDropdown()"
           (keydown.escape)="closeCustomerDropdown()"
         >
-          <span>{{ selectedCustomerLabel() || (customerDetailsLoading() ? 'Loading customer...' : 'Customer') }}</span>
+          <span class="truncate">{{ selectedCustomerLabel() || (customerDetailsLoading() ? 'Loading customer...' : 'Customer') }}</span>
           <span class="absolute right-3 h-0 w-0 border-x-[5px] border-x-transparent border-t-[6px] border-t-[currentColor]" aria-hidden="true"></span>
         </button>
         @if (customerDropdownOpen()) {
-          <div class="absolute z-[5] top-full -right-px -left-px min-h-12 border border-[#858585] bg-white shadow-[0_3px_8px_rgb(34_53_34_/_14%)]" role="region" aria-label="Customer search">
+          <div class="customer-search-panel absolute z-[5] top-[calc(100%+6px)] right-0 left-0 min-h-12 rounded-xl border bg-white shadow-xl" role="region" aria-label="Customer search">
             <input
-              class="w-full border-0 border-b border-[#c6c6c6] bg-white px-3 py-2 text-sm font-normal outline-none"
+              class="customer-search-input w-full border-0 border-b bg-white px-3 py-2 text-sm font-normal outline-none"
               type="search"
               placeholder="Search customers"
               aria-label="Search customers"
@@ -106,7 +109,7 @@
               <div role="listbox" aria-label="Customer options">
                 @for (customer of filteredCustomerOptions; track customer.docName) {
                   <button
-                    class="block w-full border-0 bg-white px-3 py-2 text-left text-sm font-normal text-[#222] cursor-pointer hover:bg-[#eef1eb]"
+                    class="customer-option block w-full border-0 bg-white px-3 py-2 text-left text-sm font-normal cursor-pointer"
                     type="button"
                     role="option"
                     [attr.aria-selected]="orderForm.controls.customer.value === customer.docName"
@@ -121,37 +124,18 @@
             }
           </div>
         }
+          </div>
+        </div>
+        <label class="form-field" for="order-date">
+          <span class="form-field-label">Date</span>
+          <input id="order-date" aria-label="Date" lang="en-US" type="date" formControlName="date" class="form-input" />
+        </label>
+        <div class="form-field">
+          <span class="form-field-label">Order Type</span>
+          <div class="form-static-value">Sales Order (V4)</div>
+        </div>
       </div>
-    </header>
-    <div class="mb-3 flex flex-wrap items-center justify-end gap-2 text-sm">
-      <label class="sr-only" for="existing-order">Open existing Sales Order</label>
-      <select
-        id="existing-order"
-        class="min-h-[34px] max-w-full border border-[#a6a6a6] bg-white px-2 text-xs"
-        aria-label="Open existing Sales Order"
-        [value]="currentOrderName()"
-        [disabled]="optionsLoading() || orderLoading()"
-        (change)="loadExistingOrder($event)"
-      >
-        <option value="" [selected]="!currentOrderName()">Open existing Sales Order...</option>
-        @if (currentOrderName()) {
-          <option [value]="currentOrderName()" selected>
-            {{ currentOrderName() }}
-            @if (currentSalesOrderOption; as order) {
-              — {{ order.customer }} ({{ order.transaction_date }})
-            }
-          </option>
-        }
-        @for (order of otherSalesOrderOptions; track order.name) {
-          <option [value]="order.name">{{ order.name }} — {{ order.customer }} ({{ order.transaction_date }})</option>
-        }
-      </select>
-      <button
-        class="min-h-[34px] border border-[#6c8753] bg-[#e6eddc] px-3 text-xs font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7]"
-        type="button"
-        (click)="startNewOrder()"
-      >New Order</button>
-    </div>
+    </section>
     @if (optionsLoading() || orderLoading()) {
       <p class="mb-2 text-sm text-[#555]" role="status">
         {{ orderLoading() ? 'Loading Sales Order...' : 'Loading Sales Order options...' }}
@@ -169,14 +153,15 @@
       </p>
     }
     @if (customerLoadError() && !customerDropdownOpen() && selectedCustomerLabel()) {
-      <p class="mt-[-10px] mb-3 w-full text-sm text-[#8b3c2c]" role="alert">
+      <p class="mx-auto mt-[-10px] mb-3 w-full max-w-[1120px] text-sm text-[#8b3c2c]" role="alert">
         {{ customerLoadError() }}
       </p>
     }
 
-    <section class="grid grid-cols-2 border border-[#a6a6a6] max-[700px]:grid-cols-1" aria-label="Order parties">
-      <section class="min-w-0 pb-2" formGroupName="billTo">
-        <h2 class="m-0 mb-2 justify-center text-center border-b border-[#a6a6a6] bg-[#f7c58c] px-2 py-[5px] text-sm leading-[1.3]">BILL TO:</h2>
+    <section class="party-cards-grid" aria-label="Order parties">
+      <section class="party-card bill-party-card min-w-0" formGroupName="billTo">
+        <h2 class="party-card-heading">BILL TO:</h2>
+        <div class="party-fields-grid">
         <div class="party-field">
           <label for="bill-name">NAME</label>
           <input id="bill-name" type="text" formControlName="name" />
@@ -244,10 +229,12 @@
           <label for="bill-ntn">NTN</label>
           <input id="bill-ntn" type="text" formControlName="ntn" />
         </div>
+        </div>
       </section>
 
-      <section class="min-w-0 border-l border-[#a6a6a6] pb-2 max-[700px]:border-l-0 max-[700px]:border-t" formGroupName="shipTo">
-        <h2 class="m-0 mb-2 justify-center text-center border-b border-[#a6a6a6] bg-[#f7c58c] px-2 py-[5px] text-sm leading-[1.3]">SHIP TO:</h2>
+      <section class="party-card ship-party-card min-w-0" formGroupName="shipTo">
+        <h2 class="party-card-heading">SHIP TO:</h2>
+        <div class="party-fields-grid">
         <div class="party-field">
           <label for="ship-name">NAME</label>
           <input id="ship-name" type="text" formControlName="name" />
@@ -315,44 +302,49 @@
           <label for="ship-ntn">NTN</label>
           <input id="ship-ntn" type="text" formControlName="ntn" />
         </div>
+        </div>
       </section>
     </section>
 
-    <section class="mt-2 grid grid-cols-4 border-t border-l border-[#a6a6a6] max-[700px]:grid-cols-2" aria-label="Order dates and terms">
-      <label class="flex min-w-0 flex-col">
-        <span class="flex min-h-[29px] items-center justify-center border border-t-0 border-l-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">DELIVERY DATE</span>
-        <input class="h-[31px] w-full min-w-0 text-center rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" type="date" lang="en-US" placeholder="mm/dd/yyyy" aria-label="Delivery date" formControlName="deliveryDate" />
+    <section class="form-card" aria-label="Order dates and terms">
+      <h2 class="form-section-title"><i aria-hidden="true"></i>Dates &amp; Terms</h2>
+      <div class="terms-grid">
+      <label class="form-field">
+        <span class="form-field-label">DELIVERY DATE</span>
+        <input class="form-input" type="date" lang="en-US" placeholder="mm/dd/yyyy" aria-label="Delivery date" formControlName="deliveryDate" />
       </label>
-      <label class="flex min-w-0 flex-col">
-        <span class="flex min-h-[29px] items-center justify-center border border-t-0 border-l-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">DUE DATE</span>
-        <input class="h-[31px] w-full min-w-0 text-center rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" type="date" lang="en-US" aria-label="Due date" formControlName="dueDate" />
+      <label class="form-field">
+        <span class="form-field-label">DUE DATE</span>
+        <input class="form-input" type="date" lang="en-US" aria-label="Due date" formControlName="dueDate" />
       </label>
-      <label class="flex min-w-0 flex-col">
-        <span class="flex min-h-[29px] items-center justify-center border border-t-0 border-l-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">PAYMENT TERMS</span>
-        <select class="h-[31px] w-full min-w-0 rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" aria-label="Payment terms" formControlName="paymentTerms">
+      <label class="form-field">
+        <span class="form-field-label">PAYMENT TERMS</span>
+        <select class="form-input" aria-label="Payment terms" formControlName="paymentTerms">
           <option value="">Select payment term...</option>
           @for (term of paymentTerms(); track term.name) {
             <option [value]="term.name">{{ term.payment_term_name }}</option>
           }
         </select>
       </label>
-      <label class="flex min-w-0 flex-col">
-        <span class="flex min-h-[29px] items-center justify-center border border-t-0 border-l-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">INCOTERM</span>
-        <select class="h-[31px] w-full min-w-0 rounded-none border border-t-0 border-l-0 border-[#a6a6a6] bg-white px-2 py-1 text-[13px] text-[#222]" aria-label="Incoterm" formControlName="incoterm">
+      <label class="form-field">
+        <span class="form-field-label">INCOTERM</span>
+        <select class="form-input" aria-label="Incoterm" formControlName="incoterm">
           <option value="">Select Incoterm...</option>
           @for (incoterm of incoterms(); track incoterm.name) {
             <option [value]="incoterm.name">{{ incoterm.title }}</option>
           }
         </select>
       </label>
+      </div>
     </section>
     @if (paymentTermError()) {
       <p class="mt-1 mb-0 text-xs text-[#8b3c2c]" role="alert">Could not load the saved payment term: {{ paymentTermError() }}</p>
     }
 
-    <section class="mt-[17px]" aria-label="Quantity">
+    <section class="form-card items-section" aria-label="Quantity">
+      <h2 class="form-section-title"><i aria-hidden="true"></i>Items</h2>
       <div class="overflow-x-auto">
-        <table class="items-table w-full min-w-[760px] table-fixed border-collapse text-[13px] text-[#222]">
+        <table class="items-table w-full min-w-[760px] table-fixed border-separate border-spacing-y-2 text-[13px]">
           <colgroup>
             <col class="w-[10.2%]" />
             <col class="w-[12.1%]" />
@@ -367,11 +359,11 @@
           </colgroup>
           <thead>
             <tr>
-              <th class="h-9 bg-[#c3d69b] text-center font-bold" colspan="2">Quantity</th>
-              <th class="h-9 bg-[#c3d69b] text-center font-bold">Unit</th>
-              <th class="h-9 bg-[#c3d69b] text-center font-bold" colspan="3">Product Name</th>
-              <th class="h-9 bg-[#c3d69b] text-center font-bold" colspan="2">Unit Price</th>
-              <th class="h-9 bg-[#c3d69b] text-center font-bold" colspan="2">Total</th>
+              <th class="text-center" colspan="2">Quantity</th>
+              <th>Unit</th>
+              <th colspan="3">Product Name</th>
+              <th colspan="2">Unit Price</th>
+              <th colspan="2">Total</th>
             </tr>
           </thead>
           <tbody formArrayName="items">
@@ -383,9 +375,9 @@
                 <td colspan="2"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Unit Price" type="number" min="0" step="any" formControlName="unitPrice" /></td>
                 <td colspan="2">
                   <div class="flex h-[38px] items-stretch">
-                    <input class="h-full w-full min-w-0 flex-1 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Total" type="text" formControlName="total" readonly />
+                    <input class="item-total-input h-full w-full min-w-0 flex-1 border-0 bg-transparent px-[7px] py-[5px] outline-offset-[-2px]" aria-label="Total" type="text" formControlName="total" readonly />
                     @if (rowIndex > 0) {
-                      <button class="flex-none border-0 border-l border-[#b9b9b9] bg-[#f3f5ef] px-2 text-[11px] text-[#4a4a4a] cursor-pointer hover:bg-[#f7c58c] disabled:cursor-not-allowed disabled:opacity-50" type="button" aria-label="Remove Row" [disabled]="orderForm.disabled" (click)="removeRow(rowIndex)">
+                      <button class="remove-row-button flex-none" type="button" aria-label="Remove Row" [disabled]="orderForm.disabled" (click)="removeRow(rowIndex)">
                         Remove
                       </button>
                     }
@@ -394,19 +386,10 @@
               </tr>
             }
           </tbody>
-          <tfoot>
-            <tr class="balance-row">
-              <td class="border-0" colspan="4"></td>
-              <th class="bg-[#c3d69b] px-[10px] text-xs" colspan="4">TOTAL BALANCE INCLUDING TAX</th>
-              <td class="bg-[#dce6f1]" colspan="2">
-                <input class="min-h-[38px] w-full border-0 bg-transparent px-2 py-[5px]" aria-label="Total balance including tax" type="text" formControlName="totalBalanceIncludingTax" readonly />
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
-      <div class="flex justify-end pt-[9px]">
-        <button class="inline-flex min-h-[34px] items-center gap-[7px] rounded-sm border border-[#6c8753] bg-[#e6eddc] px-3 text-[13px] font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7] disabled:cursor-not-allowed disabled:opacity-50" type="button" [disabled]="orderForm.disabled" (click)="addRow()"><span class="text-[18px] leading-none" aria-hidden="true">+</span> Add Row</button>
+      <div class="pt-2">
+        <button class="add-row-button w-full" type="button" [disabled]="orderForm.disabled" (click)="addRow()"><span class="text-[18px] leading-none" aria-hidden="true">+</span> Add Row</button>
       </div>
       <datalist id="sales-order-items">
         @for (item of orderItems(); track item.item_code) {
@@ -418,25 +401,25 @@
       <p class="mt-2 mb-0 text-xs text-[#8b3c2c]" role="alert">{{ itemPriceError() }}</p>
     }
     @if (orderTaxes().length) {
-      <section class="mt-4" aria-label="Saved taxes and charges">
-        <h2 class="m-0 border border-b-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-2 text-xs font-bold">TAXES AND CHARGES</h2>
+      <section class="form-card taxes-section" aria-label="Saved taxes and charges">
+        <h2 class="form-section-title"><i aria-hidden="true"></i>Taxes and Charges</h2>
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[560px] border-collapse text-left text-xs text-[#222]">
-            <thead class="bg-[#eaf0e2]">
+          <table class="taxes-table w-full min-w-[560px] border-collapse text-left text-xs">
+            <thead>
               <tr>
-                <th class="border border-[#a6a6a6] px-2 py-2">Description</th>
-                <th class="border border-[#a6a6a6] px-2 py-2">Account</th>
-                <th class="border border-[#a6a6a6] px-2 py-2 text-right">Rate</th>
-                <th class="border border-[#a6a6a6] px-2 py-2 text-right">Tax Amount</th>
+                <th>Description</th>
+                <th>Account</th>
+                <th class="text-right">Rate</th>
+                <th class="text-right">Tax Amount</th>
               </tr>
             </thead>
             <tbody>
               @for (tax of orderTaxes(); track $index) {
                 <tr>
-                  <td class="border border-[#d3d3d3] px-2 py-2">{{ tax.description || tax.charge_type || '—' }}</td>
-                  <td class="border border-[#d3d3d3] px-2 py-2">{{ tax.account_head || '—' }}</td>
-                  <td class="border border-[#d3d3d3] px-2 py-2 text-right">{{ tax.rate ?? '—' }}{{ tax.rate === undefined ? '' : '%' }}</td>
-                  <td class="border border-[#d3d3d3] px-2 py-2 text-right">{{ tax.tax_amount ?? '—' }}</td>
+                  <td>{{ tax.description || tax.charge_type || '—' }}</td>
+                  <td>{{ tax.account_head || '—' }}</td>
+                  <td class="text-right">{{ tax.rate ?? '—' }}{{ tax.rate === undefined ? '' : '%' }}</td>
+                  <td class="text-right">{{ tax.tax_amount ?? '—' }}</td>
                 </tr>
               }
             </tbody>
@@ -444,30 +427,38 @@
         </div>
       </section>
     }
-    <div class="mt-4 flex flex-wrap justify-end gap-2">
-      @if (orderDocstatus() === 1) {
-        <button
-          class="min-h-[38px] rounded-sm border border-[#6c8753] bg-[#e6eddc] px-5 text-sm font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7]"
-          type="button"
-          (click)="printOrder()"
-        >Print</button>
-      } @else {
-        @if (isExistingOrder() && canUpdateOrder()) {
+    <section class="form-card order-footer-card">
+      <div class="order-footer">
+        <div class="order-actions">
+          @if (orderDocstatus() === 1) {
           <button
-            class="min-h-[38px] rounded-sm border border-[#6c8753] bg-[#e6eddc] px-5 text-sm font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7] disabled:cursor-not-allowed disabled:opacity-60"
+            class="secondary-action"
             type="button"
-            [disabled]="savingOrder() || optionsLoading() || orderLoading()"
-            (click)="submitOrder()"
-          >{{ savingOrder() ? 'Saving and submitting...' : 'Submit Sales Order' }}</button>
-        }
-        <button
-          class="min-h-[38px] rounded-sm border border-[#526a3e] bg-[#355224] px-5 text-sm font-bold text-white cursor-pointer hover:bg-[#283e1d] disabled:cursor-not-allowed disabled:opacity-60"
-          type="button"
-          [disabled]="savingOrder() || optionsLoading() || orderLoading() || (isExistingOrder() && !canUpdateOrder())"
-          (click)="saveOrder()"
-        >{{ savingOrder() ? 'Saving...' : isExistingOrder() ? 'Update Sales Order' : 'Save Sales Order' }}</button>
-      }
-    </div>
+            (click)="printOrder()"
+          >Print</button>
+          } @else {
+            @if (isExistingOrder() && canUpdateOrder()) {
+              <button
+                class="secondary-action"
+                type="button"
+                [disabled]="savingOrder() || optionsLoading() || orderLoading()"
+                (click)="submitOrder()"
+              >{{ savingOrder() ? 'Saving and submitting...' : 'Submit Sales Order' }}</button>
+            }
+            <button
+              class="primary-action"
+              type="button"
+              [disabled]="savingOrder() || optionsLoading() || orderLoading() || (isExistingOrder() && !canUpdateOrder())"
+              (click)="saveOrder()"
+            >{{ savingOrder() ? 'Saving...' : isExistingOrder() ? 'Update Sales Order' : 'Save Sales Order' }}</button>
+          }
+        </div>
+        <div class="order-total-summary">
+          <span class="order-total-label">TOTAL BALANCE INCLUDING TAX</span>
+          <input class="order-total-input" aria-label="Total balance including tax" type="text" formControlName="totalBalanceIncludingTax" readonly />
+        </div>
+      </div>
+    </section>
       </form>
     </section>
   </main>
