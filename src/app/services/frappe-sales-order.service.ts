@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { EMPTY, expand, forkJoin, map, Observable, of, reduce } from 'rxjs';
+import { EMPTY, expand, forkJoin, map, Observable, of, reduce, shareReplay, tap } from 'rxjs';
 import {
   CompanyOption,
   IncotermOption,
+  ItemPriceOption,
   PaymentTermOption,
   SalesOrderItemOption,
   SalesOrderListOption,
@@ -15,6 +16,7 @@ import { FrappeApiService } from './frappe-api.service';
 @Injectable({ providedIn: 'root' })
 export class FrappeSalesOrderService {
   private readonly api = inject(FrappeApiService);
+  private readonly itemPrices = new Map<string, Observable<ItemPriceOption[]>>();
 
   loadOptions(): Observable<{
     companies: CompanyOption[];
@@ -95,6 +97,28 @@ export class FrappeSalesOrderService {
 
   getIncoterm(name: string): Observable<IncotermOption> {
     return this.api.getDocument<IncotermOption>('Incoterm', name);
+  }
+
+  getItemPrices(itemCode: string, priceList: string): Observable<ItemPriceOption[]> {
+    const cacheKey = JSON.stringify([itemCode, priceList]);
+    const cached = this.itemPrices.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const request = this.api.getList<ItemPriceOption>(
+      'Item Price',
+      ['name', 'item_code', 'price_list', 'price_list_rate', 'uom', 'valid_from', 'valid_upto', 'selling'],
+      [['item_code', '=', itemCode], ['price_list', '=', priceList], ['selling', '=', 1]],
+      100,
+    ).pipe(
+      tap({
+        error: () => this.itemPrices.delete(cacheKey),
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    this.itemPrices.set(cacheKey, request);
+    return request;
   }
 
   submitSalesOrder(order: SalesOrderRecord): Observable<SalesOrderRecord> {

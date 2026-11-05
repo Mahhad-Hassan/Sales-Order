@@ -90,6 +90,17 @@ export interface SalesOrderItemOption {
   stock_uom: string;
 }
 
+export interface ItemPriceOption {
+  name: string;
+  item_code: string;
+  price_list: string;
+  price_list_rate: number;
+  uom?: string | null;
+  valid_from?: string | null;
+  valid_upto?: string | null;
+  selling?: number;
+}
+
 export interface SalesOrderListOption {
   name: string;
   customer: string;

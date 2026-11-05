@@ -8,6 +8,7 @@ import { calculatePaymentDueDate, formatDateForInput } from './models/payment-te
 import {
   CompanyOption,
   IncotermOption,
+  ItemPriceOption,
   PaymentTermOption,
   SalesOrderItemOption,
   SalesOrderListOption,
@@ -55,6 +56,9 @@ export class App {
   private initializedOrderName = '';
   private loadedPaymentSchedule: NonNullable<SalesOrderRecord['payment_schedule']> = [];
   private loadedPaymentTermName = '';
+  private readonly itemPriceRequestIds = new WeakMap<FormGroup, number>();
+  private readonly manualPriceEditIds = new WeakMap<FormGroup, number>();
+  private readonly autoUnitPrices = new WeakMap<FormGroup, number>();
   private loadedSalesOrderSnapshot: SalesOrderRecord | null = null;
   private loadedCurrencySettings: Pick<
     SalesOrderRecord,
@@ -89,6 +93,7 @@ export class App {
   protected readonly orderError = signal('');
   protected readonly orderMessage = signal('');
   protected readonly paymentTermError = signal('');
+  protected readonly itemPriceError = signal('');
   protected readonly isExistingOrder = signal(false);
   protected readonly canUpdateOrder = signal(true);
   protected readonly itemRows = this.formBuilder.array<FormGroup>([this.createRow()]);
@@ -172,10 +177,20 @@ export class App {
     ).subscribe(() => this.recalculateDueDate());
     this.orderForm.controls.date.valueChanges.pipe(
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe(() => this.recalculateDueDate());
+    ).subscribe(() => {
+      this.recalculateDueDate();
+      this.refreshItemPrices();
+    });
     this.orderForm.controls.company.valueChanges.pipe(
       takeUntilDestroyed(this.destroyRef),
     ).subscribe((companyName) => this.selectPriceListForCompany(companyName ?? ''));
+
+    this.orderForm.controls.sellingPriceList.valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => this.refreshItemPrices());
+    this.itemRows.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.updateItemTotals();
+    });
   }
 
   protected get currentUser(): string {
@@ -366,10 +381,7 @@ export class App {
         this.loadedPaymentSchedule = saved.payment_schedule ?? [];
         this.loadedPaymentTermName = this.loadedPaymentSchedule[0]?.payment_term ?? '';
         this.orderTaxes.set(saved.taxes ?? []);
-        this.orderForm.controls.totalBalanceIncludingTax.setValue(
-          String(saved.grand_total ?? saved.rounded_total ?? ''),
-          { emitEvent: false },
-        );
+        this.updateItemTotals();
         this.loadedCurrencySettings = {
           company: saved.company,
           selling_price_list: saved.selling_price_list,
@@ -624,6 +636,147 @@ export class App {
       ?? matching.find((priceList) => priceList.name === currentPriceList)
       ?? (matching.length === 1 ? matching[0] : undefined);
     this.orderForm.controls.sellingPriceList.setValue(selected?.name ?? '', { emitEvent: false });
+    this.refreshItemPrices();
+  }
+
+  private handleProductSelection(row: FormGroup, productName: string): void {
+    const requestId = (this.itemPriceRequestIds.get(row) ?? 0) + 1;
+    this.itemPriceRequestIds.set(row, requestId);
+    if (this.orderLoading()) {
+      return;
+    }
+
+    const normalizedName = productName.trim().toLocaleLowerCase();
+    const item = this.orderItems().find((option) =>
+      option.item_code.toLocaleLowerCase() === normalizedName
+      || option.item_name.toLocaleLowerCase() === normalizedName,
+    );
+    if (!item) {
+      return;
+    }
+
+    row.controls['unit'].setValue(item.stock_uom ?? '', { emitEvent: false });
+    this.requestItemPrice(row, item, true, requestId);
+  }
+
+  private refreshItemPrices(): void {
+    if (this.orderLoading()) {
+      return;
+    }
+    for (const row of this.itemRows.controls) {
+      const productName = String(row.get('productName')?.value ?? '').trim().toLocaleLowerCase();
+      const item = this.orderItems().find((option) =>
+        option.item_code.toLocaleLowerCase() === productName
+        || option.item_name.toLocaleLowerCase() === productName,
+      );
+      if (!item) {
+        continue;
+      }
+      const requestId = (this.itemPriceRequestIds.get(row) ?? 0) + 1;
+      this.itemPriceRequestIds.set(row, requestId);
+      this.requestItemPrice(row, item, false, requestId);
+    }
+  }
+
+  private requestItemPrice(
+    row: FormGroup,
+    item: SalesOrderItemOption,
+    overwriteCurrentPrice: boolean,
+    requestId: number,
+  ): void {
+    const priceList = this.orderForm.controls.sellingPriceList.value ?? '';
+    if (!priceList) {
+      return;
+    }
+
+    const unitPriceControl = row.controls['unitPrice'];
+    const previousAutoPrice = this.autoUnitPrices.get(row);
+    const currentPrice = String(unitPriceControl.value ?? '').trim();
+    if (previousAutoPrice !== undefined && Number(currentPrice) === previousAutoPrice) {
+      unitPriceControl.setValue('', { emitEvent: false });
+      this.autoUnitPrices.delete(row);
+    } else if (!overwriteCurrentPrice && currentPrice) {
+      return;
+    }
+
+    this.itemPriceError.set('');
+    const priceEditId = this.manualPriceEditIds.get(row) ?? 0;
+    this.salesOrders.getItemPrices(item.item_code, priceList).pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: (prices) => {
+        if (this.itemPriceRequestIds.get(row) !== requestId
+          || this.orderForm.controls.sellingPriceList.value !== priceList
+          || this.manualPriceEditIds.get(row) !== priceEditId) {
+          return;
+        }
+        const selectedPrice = this.findValidItemPrice(
+          prices,
+          String(row.controls['unit'].value ?? ''),
+          this.orderForm.controls.date.value ?? '',
+        );
+        if (!selectedPrice) {
+          return;
+        }
+        const currentValue = String(unitPriceControl.value ?? '').trim();
+        if (!overwriteCurrentPrice && currentValue) {
+          return;
+        }
+        unitPriceControl.setValue(String(selectedPrice.price_list_rate), { emitEvent: false });
+        this.autoUnitPrices.set(row, selectedPrice.price_list_rate);
+        this.updateItemTotals();
+      },
+      error: (error: unknown) => {
+        if (this.itemPriceRequestIds.get(row) === requestId) {
+          this.itemPriceError.set(
+            `Could not fetch the stored price for ${item.item_code}: ${this.errorMessage(error)} Enter a unit price manually.`,
+          );
+        }
+      },
+    });
+  }
+
+  private findValidItemPrice(
+    prices: ItemPriceOption[],
+    unit: string,
+    date: string,
+  ): ItemPriceOption | undefined {
+    const validPrices = prices.filter((price) =>
+      Number.isFinite(price.price_list_rate)
+      && price.price_list_rate >= 0
+      && (!price.valid_from || price.valid_from <= date)
+      && (!price.valid_upto || price.valid_upto >= date),
+    );
+    const matchingUnit = validPrices.filter((price) => price.uom === unit);
+    const defaultUnit = validPrices.filter((price) => !price.uom);
+    return [...matchingUnit, ...defaultUnit]
+      .sort((left, right) => (right.valid_from ?? '').localeCompare(left.valid_from ?? ''))[0];
+  }
+
+  private updateItemTotals(): void {
+    let totalBalance = 0;
+    for (const row of this.itemRows.controls) {
+      const quantityValue = String(row.controls['quantity'].value ?? '').trim();
+      const unitPriceValue = String(row.controls['unitPrice'].value ?? '').trim();
+      const quantity = Number(quantityValue);
+      const unitPrice = Number(unitPriceValue);
+      if (!quantityValue || !unitPriceValue || !Number.isFinite(quantity) || !Number.isFinite(unitPrice)
+        || quantity < 0 || unitPrice < 0) {
+        row.controls['total'].setValue('', { emitEvent: false });
+        continue;
+      }
+      const lineTotal = this.roundAmount(quantity * unitPrice);
+      row.controls['total'].setValue(String(lineTotal), { emitEvent: false });
+      totalBalance += lineTotal;
+    }
+    this.orderForm.controls.totalBalanceIncludingTax.setValue(
+      String(this.roundAmount(totalBalance)),
+      { emitEvent: false },
+    );
+  }
+
+  private roundAmount(amount: number): number {
+    return Math.round((amount + Number.EPSILON) * 100) / 100;
   }
 
   private recalculateDueDate(): void {
@@ -661,11 +814,12 @@ export class App {
       this.itemRows.at(index).patchValue(rowValues[index]);
     }
     for (let index = this.itemRows.length; index < rowValues.length; index++) {
-      this.itemRows.push(this.formBuilder.group(rowValues[index]));
+      this.itemRows.push(this.createRow(rowValues[index]));
     }
     while (this.itemRows.length > rowValues.length) {
       this.itemRows.removeAt(this.itemRows.length - 1);
     }
+    this.updateItemTotals();
   }
 
   private updateOrderOption(order: SalesOrderRecord): void {
@@ -695,14 +849,31 @@ export class App {
     ].join('-');
   }
 
-  protected createRow(): FormGroup {
-    return this.formBuilder.group({
-      quantity: [''],
-      unit: [''],
-      productName: [''],
-      unitPrice: [''],
-      total: [''],
+  protected createRow(initialValues?: {
+    quantity: string;
+    unit: string;
+    productName: string;
+    unitPrice: string;
+    total: string;
+  }): FormGroup {
+    const row = initialValues
+      ? this.formBuilder.group(initialValues)
+      : this.formBuilder.group({
+        quantity: [''],
+        unit: [''],
+        productName: [''],
+        unitPrice: [''],
+        total: [''],
+      });
+    row.controls['productName'].valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe((productName) => this.handleProductSelection(row, String(productName ?? '')));
+    row.controls['unitPrice'].valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => {
+      this.manualPriceEditIds.set(row, (this.manualPriceEditIds.get(row) ?? 0) + 1);
     });
+    return row;
   }
 
   protected addRow(): void {
