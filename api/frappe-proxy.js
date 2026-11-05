@@ -1,4 +1,4 @@
-const FRAPPE_BACKEND_URL = process.env.FRAPPE_BACKEND_URL;
+const FRAPPE_BACKEND_URL = process.env.FRAPPE_BACKEND_URL || 'https://dev04.agrovisions.pk';
 const PROXY_PREFIX = '/api/frappe-proxy';
 const ROUTE_PARAMETER = '__frappe_path';
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
