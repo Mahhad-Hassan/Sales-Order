@@ -258,8 +258,20 @@ export class App {
     const company = this.companies().find((option) => option.name === this.orderForm.controls.company.value);
     const priceList = this.priceLists().find((option) => option.name === this.orderForm.controls.sellingPriceList.value);
     const transactionDate = this.orderForm.controls.date.value ?? '';
-    if (!customer || !company || !priceList || !transactionDate) {
-      this.orderError.set('Select a customer, company, selling price list, and order date before saving.');
+    if (!customer) {
+      this.orderError.set('Select a customer before saving.');
+      return;
+    }
+    if (!company) {
+      this.orderError.set('The customer Company Name does not match an available Frappe company.');
+      return;
+    }
+    if (!priceList) {
+      this.orderError.set('The Standard Selling price list is not available for the selected company.');
+      return;
+    }
+    if (!transactionDate) {
+      this.orderError.set('Select an order date before saving.');
       return;
     }
     if (!this.namingSeries) {
@@ -424,14 +436,7 @@ export class App {
           || namingSeries?.options?.split('\n').find((option) => option.trim())
           || '';
 
-        const matchingCompanies = this.companies();
-        if (matchingCompanies.length === 1) {
-          this.orderForm.controls.company.setValue(matchingCompanies[0].name, { emitEvent: false });
-        }
-        this.selectPriceListForCompany(
-          this.orderForm.controls.company.value ?? '',
-          this.orderForm.controls.sellingPriceList.value ?? '',
-        );
+        this.selectDefaultCompanyAndPriceList();
         const orderName = this.route.snapshot.paramMap.get('name');
         if (orderName && !this.initializedOrderName) {
           this.loadSalesOrder(orderName);
@@ -618,10 +623,15 @@ export class App {
   }
 
   private selectDefaultCompanyAndPriceList(): void {
-    if (this.companies().length === 1) {
-      const company = this.companies()[0];
+    const partyCompanyName = this.orderForm.controls.billTo.controls.companyName.value?.trim();
+    const company = this.companies().find((option) => option.name === partyCompanyName)
+      ?? (this.companies().length === 1 ? this.companies()[0] : undefined);
+    if (company) {
       this.orderForm.controls.company.setValue(company.name, { emitEvent: false });
-      this.selectPriceListForCompany(company.name);
+      this.selectPriceListForCompany(
+        company.name,
+        this.orderForm.controls.sellingPriceList.value ?? '',
+      );
     }
   }
 
@@ -634,6 +644,7 @@ export class App {
     const currentPriceList = this.orderForm.controls.sellingPriceList.value;
     const selected = this.priceLists().find((priceList) => priceList.name === preferredPriceList)
       ?? matching.find((priceList) => priceList.name === currentPriceList)
+      ?? matching.find((priceList) => priceList.name.trim().toLocaleLowerCase() === 'standard selling')
       ?? (matching.length === 1 ? matching[0] : undefined);
     this.orderForm.controls.sellingPriceList.setValue(selected?.name ?? '', { emitEvent: false });
     this.refreshItemPrices();
@@ -990,6 +1001,7 @@ export class App {
           this.billingAddressOptions.set(details.billToAddresses);
           this.shippingAddressOptions.set(details.shipToAddresses);
           this.customerEmails.set(details.emails);
+          const selectedCustomer = this.customerOptions().find((customer) => customer.docName === docName);
           const savedOrder = this.loadedSalesOrderSnapshot?.customer === docName
             ? this.loadedSalesOrderSnapshot
             : null;
@@ -1016,6 +1028,14 @@ export class App {
               email: savedOrder.contact_email || undefined,
             });
           }
+          const customerDisplayName = selectedCustomer?.displayName
+            || savedOrder?.customer_name
+            || docName;
+          this.patchCustomerPartyIdentity(this.orderForm.controls.billTo, customerDisplayName);
+          this.patchCustomerPartyIdentity(this.orderForm.controls.shipTo, customerDisplayName);
+          if (!savedOrder) {
+            this.selectDefaultCompanyAndPriceList();
+          }
           this.orderForm.controls.billTo.controls.ntn.setValue(details.taxId, { emitEvent: false });
           this.orderForm.controls.shipTo.controls.ntn.setValue(details.taxId, { emitEvent: false });
         },
@@ -1034,6 +1054,7 @@ export class App {
     if (address) {
       this.selectedBillingAddress.set(address.docName);
       this.orderForm.controls.billTo.patchValue(address.details, { emitEvent: false });
+      this.patchCustomerPartyIdentity(this.orderForm.controls.billTo, this.selectedCustomerLabel());
       this.orderForm.markAsDirty();
     }
   }
@@ -1044,6 +1065,7 @@ export class App {
     if (address) {
       this.selectedShippingAddress.set(address.docName);
       this.orderForm.controls.shipTo.patchValue(address.details, { emitEvent: false });
+      this.patchCustomerPartyIdentity(this.orderForm.controls.shipTo, this.selectedCustomerLabel());
       this.orderForm.markAsDirty();
     }
   }
@@ -1083,6 +1105,13 @@ export class App {
         control.setValue(value, { emitEvent: false });
       }
     }
+  }
+
+  private patchCustomerPartyIdentity(group: FormGroup, customerName: string): void {
+    group.patchValue({
+      name: customerName,
+      companyName: 'Mahhad (Demo)',
+    }, { emitEvent: false });
   }
 
   private errorMessage(error: unknown): string {

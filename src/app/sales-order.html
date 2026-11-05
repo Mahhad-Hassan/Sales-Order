@@ -154,26 +154,6 @@
         {{ orderDocstatus() === 1 ? 'This Sales Order is submitted and is read-only.' : 'This Sales Order is cancelled and is read-only.' }}
       </p>
     }
-    <section class="mb-3 grid grid-cols-2 border border-[#a6a6a6] max-[700px]:grid-cols-1" aria-label="ERPNext order settings">
-      <label class="flex min-w-0 flex-col border-r border-[#a6a6a6] max-[700px]:border-r-0">
-        <span class="border-b border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">COMPANY</span>
-        <select class="h-[34px] w-full min-w-0 border-0 bg-white px-2 text-[13px]" aria-label="Company" formControlName="company">
-          <option value="">Select company...</option>
-          @for (company of companies(); track company.name) {
-            <option [value]="company.name">{{ company.name }} ({{ company.default_currency }})</option>
-          }
-        </select>
-      </label>
-      <label class="flex min-w-0 flex-col">
-        <span class="border-b border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">SELLING PRICE LIST</span>
-        <select class="h-[34px] w-full min-w-0 border-0 bg-white px-2 text-[13px]" aria-label="Selling price list" formControlName="sellingPriceList">
-          <option value="">Select price list...</option>
-          @for (priceList of filteredPriceLists; track priceList.name) {
-            <option [value]="priceList.name">{{ priceList.name }} ({{ priceList.currency }})</option>
-          }
-        </select>
-      </label>
-    </section>
     @if (customerLoadError() && !customerDropdownOpen() && selectedCustomerLabel()) {
       <p class="mx-auto mt-[-10px] mb-3 w-full max-w-[1120px] text-sm text-[#8b3c2c]" role="alert">
         {{ customerLoadError() }}
