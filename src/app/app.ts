@@ -309,6 +309,7 @@ export class App {
       const unit = typeof row['unit'] === 'string' && row['unit'].trim()
         ? row['unit'].trim()
         : item.stock_uom;
+      const amount = rate === undefined ? undefined : this.roundAmount(qty * rate);
       items.push({
         item_code: item.item_code,
         item_name: item.item_name,
@@ -318,7 +319,7 @@ export class App {
         warehouse: this.orderForm.controls.sourceWarehouse.value
           || (savedItem?.item_code === item.item_code ? savedItem.warehouse : undefined)
           || undefined,
-        ...(rate === undefined ? {} : { rate }),
+        ...(rate === undefined ? {} : { rate, amount }),
       });
     }
     if (!items.length) {
@@ -376,6 +377,8 @@ export class App {
             : priceList.currency,
           plc_conversion_rate: priceListConversionRate,
           items,
+          total: this.roundAmount(items.reduce((total, item) =>
+            total + Number(item['amount'] ?? 0), 0)),
           incoterm: this.orderForm.controls.incoterm.value || null,
           customer_address: this.selectedBillingAddress() || null,
           shipping_address_name: this.selectedShippingAddress() || null,
@@ -533,7 +536,7 @@ export class App {
           company: order.company,
           sellingPriceList: order.selling_price_list,
           paymentTerms: order.payment_schedule?.[0]?.payment_term ?? '',
-          totalBalanceIncludingTax: String(order.grand_total ?? order.rounded_total ?? ''),
+          totalBalanceIncludingTax: String(order.total ?? ''),
         }, { emitEvent: false });
         this.selectPriceListForCompany(order.company, order.selling_price_list);
         this.replaceItems(order.items ?? []);

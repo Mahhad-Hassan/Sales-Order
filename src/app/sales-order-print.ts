@@ -118,8 +118,9 @@ export class SalesOrderPrintPage {
   }
 
   protected totalBalance(): number {
-    return (this.order()?.items ?? []).reduce((total, item) =>
-      total + Number(item.qty || 0) * Number(item.rate || 0), 0);
+    const order = this.order();
+    return Number(order?.total ?? (order?.items ?? []).reduce((total, item) =>
+      total + Number(item.qty || 0) * Number(item.rate || 0), 0));
   }
 
   protected displayDate(value: string | null | undefined): string {
