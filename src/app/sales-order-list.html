@@ -29,36 +29,36 @@
     </section>
 
     <section class="mt-[18px] rounded-[15px] border border-[#e7ece9] bg-white p-[clamp(18px,3vw,28px)] shadow-[0_8px_26px_rgba(34,57,48,0.035)]" aria-labelledby="records-title">
-      <div class="mb-4 flex items-center justify-between gap-4 max-[580px]:items-start">
-        <div class="flex-1 text-center">
+      <div class="mb-4 text-center">
           <h2 class="my-[3px] text-[clamp(27px,4vw,36px)] font-extrabold leading-[1.35] text-[#263d35]" id="records-title">Sales Order Records</h2>
           <p class="m-0 mt-1 text-sm text-[#82908a]" aria-live="polite">{{ filteredOrders().length }} record(s)</p>
-        </div>
-        <div class="flex shrink-0 flex-wrap gap-2 max-[580px]:flex-col">
+      </div>
+
+      <div class="mb-[14px] flex items-end justify-between gap-4 max-[700px]:flex-col max-[700px]:items-stretch">
+        <label class="flex w-full max-w-[520px] flex-col gap-[6px] text-sm font-bold text-[#43564f]" for="sales-order-search">
+          <span>Search Sales Orders</span>
+          <input
+            class="min-h-11 rounded-lg border border-[#e0e8e4] px-3 py-[9px] text-base font-normal text-[#253b34] outline-none focus:border-[#70ae97] focus:shadow-[0_0_0_3px_rgba(62,153,120,0.1)]"
+            id="sales-order-search"
+            type="search"
+            [value]="searchText()"
+            placeholder="Search by Sales Order ID, customer, date, or document status"
+            (input)="setSearchText($event)"
+          />
+        </label>
+        <div class="flex shrink-0 flex-wrap justify-end gap-2 max-[700px]:justify-start">
           <a
-            class="inline-flex min-h-[42px] cursor-pointer items-center justify-center rounded-lg border-0 bg-[#267c61] px-4 py-2 text-sm font-bold text-white no-underline hover:bg-[#1f6b53]"
+            class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border-0 bg-[#267c61] px-4 py-2 text-sm font-bold text-white no-underline hover:bg-[#1f6b53]"
             routerLink="/sales-order/new"
           >New Sales Order</a>
           <button
-            class="min-h-[42px] cursor-pointer rounded-lg border border-[#dfe9e4] bg-[#f7fbf9] px-[14px] py-2 text-sm font-semibold text-[#267c61] hover:border-[#79b9a2] hover:bg-[#f0f8f4] disabled:cursor-wait disabled:opacity-[0.65]"
+            class="min-h-11 cursor-pointer rounded-lg border border-[#dfe9e4] bg-[#f7fbf9] px-[14px] py-2 text-sm font-semibold text-[#267c61] hover:border-[#79b9a2] hover:bg-[#f0f8f4] disabled:cursor-wait disabled:opacity-[0.65]"
             type="button"
             [disabled]="loading()"
             (click)="loadOrders()"
           >{{ loading() ? 'Refreshing...' : 'Refresh list' }}</button>
         </div>
       </div>
-
-      <label class="mb-[14px] flex max-w-[520px] flex-col gap-[6px] text-sm font-bold text-[#43564f]" for="sales-order-search">
-        <span>Search Sales Orders</span>
-        <input
-          class="min-h-11 rounded-lg border border-[#e0e8e4] px-3 py-[9px] text-base font-normal text-[#253b34] outline-none focus:border-[#70ae97] focus:shadow-[0_0_0_3px_rgba(62,153,120,0.1)]"
-          id="sales-order-search"
-          type="search"
-          [value]="searchText()"
-          placeholder="Search by Sales Order ID, customer, date, or document status"
-          (input)="setSearchText($event)"
-        />
-      </label>
 
       @if (error()) {
         <div class="mt-3 rounded-lg border border-[#f1d4d0] bg-[#fff7f6] px-3 py-[10px] text-base leading-[1.7] text-[#a34539]" role="alert">
