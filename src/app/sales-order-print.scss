@@ -1,0 +1,18 @@
+@media print {
+  .print-page {
+    min-height: 0;
+    padding: 0;
+    background: white;
+  }
+
+  .print-toolbar {
+    display: none;
+  }
+
+  .print-document {
+    max-width: none;
+    border: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+}
