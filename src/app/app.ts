@@ -1,7 +1,7 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subject, catchError, debounceTime, finalize, forkJoin, of, switchMap, throwError, timeout } from 'rxjs';
 import { CustomerAddressOption, CustomerOption, EMPTY_CUSTOMER_PARTY } from './models/customer-option.model';
 import { calculatePaymentDueDate, formatDateForInput } from './models/payment-term-date';
@@ -32,7 +32,7 @@ function mergeUniqueByName<T extends { name: string }>(...collections: T[][]): T
 }
 
 @Component({
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './sales-order.html',
@@ -180,6 +180,22 @@ export class App {
 
   protected get currentUser(): string {
     return this.auth.currentUser() ?? '';
+  }
+
+  canDeactivate(): boolean {
+    if (this.savingOrder()) {
+      this.orderError.set('Please wait for the Sales Order save to finish before leaving.');
+      return false;
+    }
+    return !this.orderForm.dirty || window.confirm('You have unsaved changes. Leave this Sales Order?');
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  protected confirmBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.orderForm.dirty) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
   }
 
   protected loadExistingOrder(event: Event): void {
@@ -370,6 +386,7 @@ export class App {
         this.orderMessage.set(submitAfterSave
           ? `Sales Order ${saved.name} submitted successfully.`
           : `Sales Order ${saved.name} saved successfully.`);
+        this.orderForm.markAsPristine();
         this.updateOrderOption(saved);
         if (!submitAfterSave) {
           void this.router.navigate(['/sales-orders']);
@@ -492,6 +509,7 @@ export class App {
         }, { emitEvent: false });
         this.selectPriceListForCompany(order.company, order.selling_price_list);
         this.replaceItems(order.items ?? []);
+        this.orderForm.markAsPristine();
         if (order.docstatus === 0) {
           this.orderForm.enable({ emitEvent: false });
         } else {
@@ -689,6 +707,7 @@ export class App {
 
   protected addRow(): void {
     this.itemRows.push(this.createRow());
+    this.orderForm.markAsDirty();
   }
 
   protected toggleCustomerDropdown(): void {
@@ -746,6 +765,7 @@ export class App {
     this.customerSearch.reset('', { emitEvent: false });
     this.closeCustomerDropdown();
     this.orderForm.controls.customer.setValue(customer.docName);
+    this.orderForm.markAsDirty();
   }
 
   private loadSelectedCustomer(customerName: string): void {
@@ -843,6 +863,7 @@ export class App {
     if (address) {
       this.selectedBillingAddress.set(address.docName);
       this.orderForm.controls.billTo.patchValue(address.details, { emitEvent: false });
+      this.orderForm.markAsDirty();
     }
   }
 
@@ -852,6 +873,7 @@ export class App {
     if (address) {
       this.selectedShippingAddress.set(address.docName);
       this.orderForm.controls.shipTo.patchValue(address.details, { emitEvent: false });
+      this.orderForm.markAsDirty();
     }
   }
 
@@ -863,6 +885,7 @@ export class App {
   protected selectEmail(party: 'billTo' | 'shipTo', email: string): void {
     const group = party === 'billTo' ? this.orderForm.controls.billTo : this.orderForm.controls.shipTo;
     group.controls.email.setValue(email);
+    this.orderForm.markAsDirty();
     (party === 'billTo' ? this.billingEmailDropdownOpen : this.shippingEmailDropdownOpen).set(false);
   }
 
@@ -878,6 +901,7 @@ export class App {
   protected removeRow(index: number): void {
     if (index > 0 && index < this.itemRows.length) {
       this.itemRows.removeAt(index);
+      this.orderForm.markAsDirty();
     }
   }
 

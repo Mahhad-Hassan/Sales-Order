@@ -8,6 +8,7 @@ import { FrappeSalesOrderService } from './services/frappe-sales-order.service';
 @Component({
   imports: [RouterLink],
   selector: 'app-sales-order-list',
+  styleUrl: './sales-order-list.scss',
   templateUrl: './sales-order-list.html',
 })
 export class SalesOrderListPage {
@@ -30,7 +31,10 @@ export class SalesOrderListPage {
       order.name,
       order.customer,
       order.customer_name,
+      order.transaction_date,
+      order.delivery_date,
       order.status,
+      order.grand_total === undefined ? '' : String(order.grand_total),
     ].some((value) => value?.toLocaleLowerCase().includes(query)));
   });
 

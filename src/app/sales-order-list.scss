@@ -1,0 +1,22 @@
+.mobile-record-label {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .sales-order-list-header {
+    display: none;
+  }
+
+  .sales-order-list-item {
+    justify-items: start;
+  }
+
+  .mobile-record-label {
+    display: block;
+    margin-bottom: 3px;
+    color: #71807a;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+}

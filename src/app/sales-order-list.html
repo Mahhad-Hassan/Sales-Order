@@ -1,86 +1,113 @@
-<main class="min-h-screen bg-[#eef1eb] p-[clamp(16px,3vw,40px)] max-[700px]:p-[10px]">
-  <section class="mx-auto w-full max-w-[1180px] border border-[#a6a6a6] bg-white px-[30px] py-6 shadow-[0_3px_14px_rgb(34_53_34_/_8%)] max-[700px]:px-3">
-    <header class="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <img class="h-[58px] w-auto object-contain" src="/AgroVisions%20Logo.png" alt="AgroVisions logo" />
-        <div>
-          <h1 class="m-0 text-2xl font-bold text-[#355224]">Sales Orders</h1>
-          <p class="m-0 mt-1 text-sm text-[#62685f]">Sales Order Management</p>
+<div class="min-h-screen [background:radial-gradient(ellipse_at_90%_0,rgba(210,235,227,0.38),transparent_34rem),#f5f7f6]">
+  <header class="relative flex min-h-[78px] items-center justify-center border-b border-[#e8eeeb] bg-white px-[clamp(20px,5vw,76px)] max-[580px]:min-h-[68px] max-[580px]:px-4">
+    <a class="inline-flex items-center gap-3 text-[#173c36] no-underline" routerLink="/sales-orders" aria-label="Sales Orders home">
+      <img class="h-[48px] w-auto object-contain" src="/AgroVisions%20Logo.png" alt="" />
+      <span class="text-left">
+        <strong class="block text-[22px] font-extrabold leading-tight">AGROVISIONS</strong>
+        <small class="mt-1 block text-sm text-[#82918c]">Sales Order Management</small>
+      </span>
+    </a>
+    @if (currentUser) {
+      <div class="absolute right-5 flex items-center gap-3 max-[580px]:right-3 max-[580px]:gap-2">
+        <span class="text-sm font-semibold text-[#24765f] max-[580px]:hidden">{{ currentUser }}</span>
+        <button
+          class="rounded-lg border border-[#e0e8e4] bg-white px-3 py-1 text-sm font-bold text-[#a34539] hover:bg-[#fff7f6]"
+          type="button"
+          (click)="logout()"
+        >Sign out</button>
+      </div>
+    }
+  </header>
+
+  <main class="mx-auto w-full max-w-[1360px] px-[clamp(16px,3vw,48px)] pb-7 pt-10 max-[580px]:[padding:28px_14px_24px]">
+    <section class="mb-7 flex justify-center text-center max-[580px]:mb-5">
+      <div>
+        <p class="m-0 text-[16px] font-extrabold tracking-[0.3px] text-[#399477]">Sales Order Management</p>
+        <h1 class="my-[5px] text-[clamp(30px,calc(3vw+10px),42px)] font-extrabold leading-[1.35] tracking-[-0.5px] text-[#1c332d]">Sales Orders</h1>
+        <p class="m-0 text-base text-[#71807a]">Search, view, and manage your Sales Orders.</p>
+      </div>
+    </section>
+
+    <section class="mt-[18px] rounded-[15px] border border-[#e7ece9] bg-white p-[clamp(18px,3vw,28px)] shadow-[0_8px_26px_rgba(34,57,48,0.035)]" aria-labelledby="records-title">
+      <div class="mb-4 flex items-center justify-between gap-4 max-[580px]:items-start">
+        <div class="flex-1 text-center">
+          <h2 class="my-[3px] text-[clamp(27px,4vw,36px)] font-extrabold leading-[1.35] text-[#263d35]" id="records-title">Sales Order Records</h2>
+          <p class="m-0 mt-1 text-sm text-[#82908a]" aria-live="polite">{{ filteredOrders().length }} record(s)</p>
+        </div>
+        <div class="flex shrink-0 flex-wrap gap-2 max-[580px]:flex-col">
+          <a
+            class="inline-flex min-h-[42px] cursor-pointer items-center justify-center rounded-lg border-0 bg-[#267c61] px-4 py-2 text-sm font-bold text-white no-underline hover:bg-[#1f6b53]"
+            routerLink="/sales-order/new"
+          >New Sales Order</a>
+          <button
+            class="min-h-[42px] cursor-pointer rounded-lg border border-[#dfe9e4] bg-[#f7fbf9] px-[14px] py-2 text-sm font-semibold text-[#267c61] hover:border-[#79b9a2] hover:bg-[#f0f8f4] disabled:cursor-wait disabled:opacity-[0.65]"
+            type="button"
+            [disabled]="loading()"
+            (click)="loadOrders()"
+          >{{ loading() ? 'Refreshing...' : 'Refresh list' }}</button>
         </div>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
-        @if (currentUser) {
-          <span class="text-xs text-[#555]">Signed in as <strong class="font-semibold text-[#355224]">{{ currentUser }}</strong></span>
-          <button class="border-0 bg-transparent p-0 text-xs font-semibold text-[#355224] underline cursor-pointer" type="button" (click)="logout()">Sign out</button>
-        }
-        <a
-          class="inline-flex min-h-[38px] items-center rounded-sm border border-[#526a3e] bg-[#355224] px-4 text-sm font-bold text-white no-underline hover:bg-[#283e1d]"
-          routerLink="/sales-order/new"
-        >New Sales Order</a>
-      </div>
-    </header>
 
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <label class="min-w-[220px] flex-1">
-        <span class="sr-only">Search Sales Orders</span>
+      <label class="mb-[14px] flex max-w-[520px] flex-col gap-[6px] text-sm font-bold text-[#43564f]" for="sales-order-search">
+        <span>Search Sales Orders</span>
         <input
-          class="h-10 w-full border border-[#a6a6a6] bg-white px-3 text-sm text-[#222] outline-offset-2"
+          class="min-h-11 rounded-lg border border-[#e0e8e4] px-3 py-[9px] text-base font-normal text-[#253b34] outline-none focus:border-[#70ae97] focus:shadow-[0_0_0_3px_rgba(62,153,120,0.1)]"
+          id="sales-order-search"
           type="search"
-          placeholder="Search Sales Order ID, customer, or status"
-          aria-label="Search Sales Orders"
           [value]="searchText()"
+          placeholder="Search by Sales Order ID, customer, date, or status"
           (input)="setSearchText($event)"
         />
       </label>
-      <button
-        class="min-h-[38px] border border-[#6c8753] bg-[#e6eddc] px-4 text-sm font-semibold text-[#304322] cursor-pointer hover:bg-[#d6e2c7] disabled:opacity-60"
-        type="button"
-        [disabled]="loading()"
-        (click)="loadOrders()"
-      >Refresh</button>
-    </div>
 
-    @if (loading()) {
-      <p class="border border-[#d6ddcf] bg-[#f7f9f5] px-4 py-8 text-center text-sm text-[#555]" role="status">Loading Sales Orders...</p>
-    } @else if (error()) {
-      <div class="border border-[#e4b7aa] bg-[#fff4f0] px-4 py-5 text-sm text-[#8b3c2c]" role="alert">
-        <p class="m-0 mb-3">{{ error() }}</p>
-        <button class="border border-[#8b3c2c] bg-white px-3 py-1 text-sm font-semibold cursor-pointer" type="button" (click)="loadOrders()">Try again</button>
-      </div>
-    } @else if (filteredOrders().length === 0) {
-      <p class="border border-[#d6ddcf] bg-[#f7f9f5] px-4 py-8 text-center text-sm text-[#555]" role="status">
-        {{ searchText().trim() ? 'No Sales Orders match your search.' : 'No Sales Orders found.' }}
-      </p>
-    } @else {
-      <p class="mb-2 text-xs text-[#62685f]" aria-live="polite">{{ filteredOrders().length }} Sales Order(s)</p>
-      <div class="overflow-x-auto border border-[#a6a6a6]">
-        <table class="w-full min-w-[760px] border-collapse text-left text-sm text-[#222]">
-          <thead class="bg-[#c3d69b]">
-            <tr>
-              <th class="border-b border-[#a6a6a6] px-3 py-3 font-bold">Sales Order ID</th>
-              <th class="border-b border-[#a6a6a6] px-3 py-3 font-bold">Customer</th>
-              <th class="border-b border-[#a6a6a6] px-3 py-3 font-bold">Transaction Date</th>
-              <th class="border-b border-[#a6a6a6] px-3 py-3 font-bold">Delivery Date</th>
-              <th class="border-b border-[#a6a6a6] px-3 py-3 text-right font-bold">Grand Total</th>
-              <th class="border-b border-[#a6a6a6] px-3 py-3 font-bold">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (order of filteredOrders(); track order.name) {
-              <tr class="cursor-pointer odd:bg-white even:bg-[#f7f9f5] hover:bg-[#edf3e6]" tabindex="0" (click)="openOrder(order.name)" (keydown.enter)="openOrder(order.name)">
-                <td class="border-b border-[#e0e0e0] px-3 py-3 font-semibold text-[#355224]">
-                  <a class="text-[#355224] underline" [routerLink]="['/sales-order', order.name]">{{ order.name }}</a>
-                </td>
-                <td class="border-b border-[#e0e0e0] px-3 py-3">{{ order.customer_name || order.customer }}</td>
-                <td class="border-b border-[#e0e0e0] px-3 py-3">{{ order.transaction_date || '—' }}</td>
-                <td class="border-b border-[#e0e0e0] px-3 py-3">{{ order.delivery_date || '—' }}</td>
-                <td class="border-b border-[#e0e0e0] px-3 py-3 text-right">{{ formatAmount(order) }}</td>
-                <td class="border-b border-[#e0e0e0] px-3 py-3">{{ orderStatus(order) }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  </section>
-</main>
+      @if (error()) {
+        <div class="mt-3 rounded-lg border border-[#f1d4d0] bg-[#fff7f6] px-3 py-[10px] text-base leading-[1.7] text-[#a34539]" role="alert">
+          <p class="m-0">{{ error() }}</p>
+          <button class="mt-2 cursor-pointer rounded-lg border border-[#e8bdb7] bg-white px-3 py-1 font-bold text-[#a34539]" type="button" (click)="loadOrders()">Try again</button>
+        </div>
+      }
+
+      @if (loading() && orders().length === 0) {
+        <p class="my-0 rounded-[9px] border border-dashed border-[#dfe8e3] px-3 py-[18px] text-center text-base text-[#71807a]" role="status">Loading Sales Orders from Frappe...</p>
+      } @else if (filteredOrders().length > 0) {
+        <div class="grid gap-2" role="table" aria-label="Sales Order records">
+          <div class="sales-order-list-header grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-3 rounded-[10px] bg-[#f0f5f2] px-[14px] py-3 text-sm font-bold text-[#43564f]" role="row">
+            <span role="columnheader">Sales Order ID</span>
+            <span role="columnheader">Customer</span>
+            <span role="columnheader">Date</span>
+            <span class="text-right" role="columnheader">Grand Total</span>
+            <span class="text-center" role="columnheader">Status</span>
+          </div>
+          @for (order of filteredOrders(); track order.name) {
+            <button
+              class="sales-order-list-item grid w-full cursor-pointer grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-3 rounded-[10px] border border-[#e8eeeb] bg-white px-[14px] py-3 text-left text-[#344a42] transition-[border-color,background] duration-[140ms] hover:border-[#79b9a2] hover:bg-[#f5fbf8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70ae97] max-[760px]:grid-cols-2"
+              type="button"
+              (click)="openOrder(order.name)"
+              role="row"
+            >
+              <span class="min-w-0 break-words text-base font-bold text-[#267c61]" role="cell">
+                <small class="mobile-record-label">Sales Order ID</small>{{ order.name }}
+              </span>
+              <span class="min-w-0 break-words text-base" role="cell">
+                <small class="mobile-record-label">Customer</small>{{ order.customer_name || order.customer }}
+              </span>
+              <span class="min-w-0 text-base text-[#71807a]" role="cell">
+                <small class="mobile-record-label">Date / Delivery</small>{{ order.transaction_date || '—' }}<span class="block text-xs">Delivery: {{ order.delivery_date || '—' }}</span>
+              </span>
+              <span class="text-base max-[760px]:text-left min-[761px]:text-right" role="cell">
+                <small class="mobile-record-label">Grand Total</small>{{ formatAmount(order) }}
+              </span>
+              <span class="text-base font-bold text-[#71807a] max-[760px]:text-left min-[761px]:text-center" role="cell">
+                <small class="mobile-record-label">Status</small>{{ orderStatus(order) }}
+              </span>
+            </button>
+          }
+        </div>
+      } @else {
+        <p class="my-0 rounded-[9px] border border-dashed border-[#dfe8e3] px-3 py-[18px] text-center text-base text-[#71807a]" role="status">
+          {{ searchText().trim() ? 'No Sales Orders match your search.' : 'No Sales Orders found.' }}
+        </p>
+      }
+    </section>
+  </main>
+</div>

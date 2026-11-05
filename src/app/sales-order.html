@@ -1,11 +1,49 @@
-<main class="min-h-screen p-[clamp(16px,3vw,40px)] max-[700px]:p-[10px]">
-  <form class="mx-auto w-full max-w-[1120px] border border-[#a6a6a6] bg-white px-[30px] pt-[26px] pb-6 shadow-[0_3px_14px_rgb(34_53_34_/_8%)] max-[700px]:px-3 max-[700px]:pt-4 max-[700px]:pb-[18px]" [formGroup]="orderForm">
+<div class="min-h-screen [background:radial-gradient(ellipse_at_90%_0,rgba(210,235,227,0.38),transparent_34rem),#f5f7f6]">
+  <header class="relative flex min-h-[78px] items-center justify-center border-b border-[#e8eeeb] bg-white px-[clamp(20px,5vw,76px)] max-[580px]:min-h-[68px] max-[580px]:px-4">
+    <a class="inline-flex items-center gap-3 text-[#173c36] no-underline" routerLink="/sales-orders" aria-label="Sales Orders home">
+      <img class="h-[48px] w-auto object-contain" src="/AgroVisions%20Logo.png" alt="" />
+      <span class="text-left">
+        <strong class="block text-[22px] font-extrabold leading-tight">AGROVISIONS</strong>
+        <small class="mt-1 block text-sm text-[#82918c]">Sales Order Management</small>
+      </span>
+    </a>
     @if (currentUser) {
-      <div class="mb-3 flex items-center justify-end gap-3 text-xs text-[#555]">
-        <span>Signed in as <strong class="font-semibold text-[#355224]">{{ currentUser }}</strong></span>
-        <button class="border-0 bg-transparent p-0 text-xs font-semibold text-[#355224] underline cursor-pointer hover:text-[#283e1d]" type="button" (click)="logoutFromFrappe()">Sign out</button>
+      <div class="absolute right-5 flex items-center gap-3 max-[580px]:right-3 max-[580px]:gap-2">
+        <span class="text-sm font-semibold text-[#24765f] max-[580px]:hidden">{{ currentUser }}</span>
+        <button
+          class="rounded-lg border border-[#e0e8e4] bg-white px-3 py-1 text-sm font-bold text-[#a34539] hover:bg-[#fff7f6]"
+          type="button"
+          (click)="logoutFromFrappe()"
+        >Sign out</button>
       </div>
     }
+  </header>
+
+  <main class="mx-auto w-full max-w-[1360px] px-[clamp(16px,3vw,48px)] pb-7 pt-10 max-[580px]:[padding:28px_14px_24px]">
+    <section class="mb-7 flex justify-center text-center max-[580px]:mb-5">
+      <div>
+        <p class="m-0 text-[16px] font-extrabold tracking-[0.3px] text-[#399477]">Sales Order Management</p>
+        <h1 class="my-[5px] text-[clamp(30px,calc(3vw+10px),42px)] font-extrabold leading-[1.35] tracking-[-0.5px] text-[#1c332d]">
+          {{ isExistingOrder() ? 'Sales Order Details' : 'New Sales Order' }}
+        </h1>
+        <p class="m-0 text-base text-[#71807a]">Create, review, and manage Sales Orders.</p>
+      </div>
+    </section>
+
+    <section class="opened-record panel mt-[18px] rounded-[15px] border border-[#e7ece9] bg-white p-[clamp(18px,3vw,32px)] shadow-[0_8px_26px_rgba(34,57,48,0.035)]">
+      <div class="opened-record-toolbar mb-5 flex items-center justify-between gap-[14px] border-b border-[#edf0ee] pb-4">
+        <button
+          class="inline-flex min-h-[42px] cursor-pointer items-center gap-2 rounded-lg border border-[#dfe9e4] bg-[#f7fbf9] px-[13px] py-2 text-sm text-[#267c61] hover:border-[#79b9a2] hover:bg-[#f0f8f4]"
+          type="button"
+          aria-label="Back to Sales Orders"
+          (click)="backToSalesOrders()"
+        ><span aria-hidden="true">←</span> Back to Sales Orders</button>
+        <span class="rounded-[20px] bg-[#f0f3f2] px-[10px] py-[6px] text-sm font-bold text-[#60716a]">
+          {{ isExistingOrder() ? currentOrderName() : 'New Sales Order' }}
+        </span>
+      </div>
+
+      <form class="mx-auto w-full max-w-[1120px] px-[clamp(0px,1vw,10px)]" [formGroup]="orderForm">
     <header class="mb-[18px] grid grid-cols-[1.09fr_1.29fr_repeat(4,1fr)_1.29fr_repeat(3,1fr)] grid-rows-[74px_48px] max-[700px]:grid-rows-[62px_44px]">
       <div class="col-[1/7] row-[1/2] flex items-center gap-3 pl-1 font-[Arial,sans-serif] text-4xl font-bold text-[#355224] max-[700px]:text-[28px]">
         <span>AGROVISIONS</span>
@@ -72,11 +110,6 @@
       </div>
     </header>
     <div class="mb-3 flex flex-wrap items-center justify-end gap-2 text-sm">
-      <button
-        class="min-h-[34px] border border-[#6c8753] bg-[#e6eddc] px-3 text-xs font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7]"
-        type="button"
-        (click)="backToSalesOrders()"
-      >Sales Order List</button>
       <label class="sr-only" for="existing-order">Open existing Sales Order</label>
       <select
         id="existing-order"
@@ -438,5 +471,7 @@
         >{{ savingOrder() ? 'Saving...' : isExistingOrder() ? 'Update Sales Order' : 'Save Sales Order' }}</button>
       }
     </div>
-  </form>
-</main>
+      </form>
+    </section>
+  </main>
+</div>
