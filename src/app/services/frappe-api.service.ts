@@ -139,7 +139,17 @@ export class FrappeApiService {
   private toUserError(error: unknown): Error {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 0) {
-        return new Error('Frappe is unreachable. Check the URL, network access, and CORS configuration.');
+        return new Error(
+          'The browser did not receive a response from Frappe. Check network and TLS connectivity, and inspect the browser console for CORS or preflight errors. Angular cannot distinguish these browser-level failures by status alone.',
+        );
+      }
+
+      const isLoginRequest = error.url?.split('?')[0].endsWith('/api/method/login') ?? false;
+      if (isLoginRequest && (error.status === 400 || error.status === 401)) {
+        return new Error('Frappe rejected the login. Check the username and password, or verify the account is allowed to sign in.');
+      }
+      if (isLoginRequest && error.status === 429) {
+        return new Error('Frappe is temporarily rate-limiting login attempts. Wait a moment and try again.');
       }
       if (error.status === 401) {
         return new Error('Frappe sign-in is required or the session has expired.');
@@ -147,9 +157,11 @@ export class FrappeApiService {
       if (error.status === 403) {
         return new Error('Your Frappe account does not have permission for this action.');
       }
+      if (error.status >= 500) {
+        return new Error(`Frappe server error (HTTP ${error.status}). Please try again later or contact your Frappe administrator.`);
+      }
 
-      const message = error.error?.message ?? error.error?.exception;
-      return new Error(typeof message === 'string' ? message : `Frappe request failed (${error.status}).`);
+      return new Error(`Frappe request failed (HTTP ${error.status}).`);
     }
 
     return error instanceof Error ? error : new Error('Unexpected Frappe request error.');
