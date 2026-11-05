@@ -55,7 +55,7 @@
           id="sales-order-search"
           type="search"
           [value]="searchText()"
-          placeholder="Search by Sales Order ID, customer, date, or status"
+          placeholder="Search by Sales Order ID, customer, date, or document status"
           (input)="setSearchText($event)"
         />
       </label>
@@ -71,16 +71,18 @@
         <p class="my-0 rounded-[9px] border border-dashed border-[#dfe8e3] px-3 py-[18px] text-center text-base text-[#71807a]" role="status">Loading Sales Orders from Frappe...</p>
       } @else if (filteredOrders().length > 0) {
         <div class="grid gap-2" role="table" aria-label="Sales Order records">
-          <div class="sales-order-list-header grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-3 rounded-[10px] bg-[#f0f5f2] px-[14px] py-3 text-sm font-bold text-[#43564f]" role="row">
+          <div class="sales-order-list-header grid grid-cols-[minmax(0,1.25fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.85fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] items-center gap-3 rounded-[10px] bg-[#f0f5f2] px-[14px] py-3 text-sm font-bold text-[#43564f]" role="row">
             <span role="columnheader">Sales Order ID</span>
             <span role="columnheader">Customer</span>
             <span role="columnheader">Date</span>
             <span class="text-right" role="columnheader">Grand Total</span>
-            <span class="text-center" role="columnheader">Status</span>
+            <span class="text-center" role="columnheader">Sales Order</span>
+            <span class="text-center" role="columnheader">Delivery Note</span>
+            <span class="text-center" role="columnheader">Sales Invoice</span>
           </div>
           @for (order of filteredOrders(); track order.name) {
             <button
-              class="sales-order-list-item grid w-full cursor-pointer grid-cols-[minmax(0,1.3fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-3 rounded-[10px] border border-[#e8eeeb] bg-white px-[14px] py-3 text-left text-[#344a42] transition-[border-color,background] duration-[140ms] hover:border-[#79b9a2] hover:bg-[#f5fbf8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70ae97] max-[760px]:grid-cols-2"
+              class="sales-order-list-item grid w-full cursor-pointer grid-cols-[minmax(0,1.25fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.85fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] items-center gap-3 rounded-[10px] border border-[#e8eeeb] bg-white px-[14px] py-3 text-left text-[#344a42] transition-[border-color,background] duration-[140ms] hover:border-[#79b9a2] hover:bg-[#f5fbf8] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#70ae97] max-[760px]:grid-cols-2"
               type="button"
               (click)="openOrder(order.name)"
               role="row"
@@ -98,7 +100,13 @@
                 <small class="mobile-record-label">Grand Total</small>{{ formatAmount(order) }}
               </span>
               <span class="text-base font-bold text-[#71807a] max-[760px]:text-left min-[761px]:text-center" role="cell">
-                <small class="mobile-record-label">Status</small>{{ orderStatus(order) }}
+                <small class="mobile-record-label">Sales Order</small>{{ orderStatus(order) }}
+              </span>
+              <span class="text-base font-bold text-[#71807a] max-[760px]:text-left min-[761px]:text-center" role="cell">
+                <small class="mobile-record-label">Delivery Note</small>{{ order.deliveryNoteStatus || '—' }}
+              </span>
+              <span class="text-base font-bold text-[#71807a] max-[760px]:text-left min-[761px]:text-center" role="cell">
+                <small class="mobile-record-label">Sales Invoice</small>{{ order.salesInvoiceStatus || '—' }}
               </span>
             </button>
           }

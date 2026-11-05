@@ -110,7 +110,7 @@ export interface ItemPriceOption {
   selling?: number;
 }
 
-export interface SalesOrderListOption {
+export interface SalesOrderListOption extends Record<string, unknown> {
   name: string;
   customer: string;
   customer_name?: string;
@@ -120,4 +120,27 @@ export interface SalesOrderListOption {
   currency?: string;
   status?: string;
   docstatus: number;
+  salesOrderStatus?: string;
+  deliveryNoteStatus?: string;
+  salesInvoiceStatus?: string;
+}
+
+export interface LinkedDocumentItem {
+  name: string;
+  parent: string;
+  against_sales_order?: string;
+  sales_order?: string;
+}
+
+export interface LinkedDocumentStatus extends Record<string, unknown> {
+  name: string;
+  status?: string;
+  docstatus: number;
+}
+
+export interface WorkflowConfiguration {
+  name: string;
+  document_type: string;
+  workflow_state_field: string;
+  is_active: number;
 }
