@@ -116,6 +116,7 @@ export interface SalesOrderListOption extends Record<string, unknown> {
   customer_name?: string;
   transaction_date: string;
   delivery_date?: string | null;
+  total?: number;
   grand_total?: number;
   currency?: string;
   status?: string;

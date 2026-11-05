@@ -100,7 +100,7 @@
                 <small class="mobile-record-label">Date / Delivery</small>{{ order.transaction_date || '—' }}<span class="delivery-date block text-xs">Delivery: {{ order.delivery_date || '—' }}</span>
               </span>
               <span class="sales-order-amount text-sm font-bold max-[760px]:text-left min-[761px]:text-right" role="cell">
-                <small class="mobile-record-label">Grand Total</small>{{ formatAmount(order) }}
+                <small class="mobile-record-label">Total</small>{{ formatAmount(order) }}
               </span>
               <span class="sales-order-status-cell text-sm font-bold max-[760px]:text-left min-[761px]:text-center" role="cell">
                 <small class="mobile-record-label">Sales Order</small>

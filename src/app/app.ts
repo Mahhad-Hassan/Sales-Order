@@ -297,19 +297,23 @@ export class App {
         || option.item_name.toLocaleLowerCase() === productName.toLocaleLowerCase(),
       );
       const qty = Number(quantityValue);
-      const hasRate = typeof rateValue === 'string' && rateValue.trim().length > 0;
-      const rate = hasRate ? Number(rateValue) : undefined;
+      const rateText = String(rateValue ?? '').trim();
+      const hasRate = rateText.length > 0;
+      const rate = hasRate ? Number(rateText) : undefined;
+      const amountText = String(row['total'] ?? '').trim();
+      const amount = amountText ? Number(amountText) : undefined;
       const savedItem = this.loadedSalesOrderSnapshot?.items[index];
       if (!item || !Number.isFinite(qty) || qty <= 0
-        || (hasRate && (!Number.isFinite(rate) || Number(rate) < 0))) {
-        this.orderError.set(`Enter a valid product, positive quantity, and non-negative unit price on item row ${index + 1}.`);
+        || (hasRate && (!Number.isFinite(rate) || Number(rate) < 0))
+        || (amountText && (!Number.isFinite(amount) || Number(amount) < 0))) {
+        this.orderError.set(`Enter a valid product, positive quantity, non-negative unit price, and valid total on item row ${index + 1}.`);
         return;
       }
 
       const unit = typeof row['unit'] === 'string' && row['unit'].trim()
         ? row['unit'].trim()
         : item.stock_uom;
-      const amount = rate === undefined ? undefined : this.roundAmount(qty * rate);
+      const lineAmount = amount ?? (rate === undefined ? undefined : this.roundAmount(qty * rate));
       items.push({
         item_code: item.item_code,
         item_name: item.item_name,
@@ -319,7 +323,8 @@ export class App {
         warehouse: this.orderForm.controls.sourceWarehouse.value
           || (savedItem?.item_code === item.item_code ? savedItem.warehouse : undefined)
           || undefined,
-        ...(rate === undefined ? {} : { rate, amount }),
+        ...(rate === undefined ? {} : { rate }),
+        ...(lineAmount === undefined ? {} : { amount: lineAmount }),
       });
     }
     if (!items.length) {
@@ -333,6 +338,14 @@ export class App {
     const savedCurrencySettings = this.loadedCurrencySettings;
     const preserveCurrencySettings = savedCurrencySettings?.company === company.name
       && savedCurrencySettings.selling_price_list === priceList.name;
+    const formTotalText = String(this.orderForm.controls.totalBalanceIncludingTax.value ?? '').trim();
+    const formTotal = formTotalText ? Number(formTotalText) : undefined;
+    if (formTotalText && (!Number.isFinite(formTotal) || Number(formTotal) < 0)) {
+      this.orderError.set('Enter a valid Total Balance Including Tax before saving.');
+      return;
+    }
+    const itemsTotal = this.roundAmount(items.reduce((total, item) =>
+      total + Number(item['amount'] ?? 0), 0));
     const priceListConversionRate$ = preserveCurrencySettings
       ? of(savedCurrencySettings.plc_conversion_rate)
       : this.salesOrders.getExchangeRate(priceList.currency, company.default_currency, transactionDate);
@@ -377,8 +390,7 @@ export class App {
             : priceList.currency,
           plc_conversion_rate: priceListConversionRate,
           items,
-          total: this.roundAmount(items.reduce((total, item) =>
-            total + Number(item['amount'] ?? 0), 0)),
+          total: formTotal ?? itemsTotal,
           incoterm: this.orderForm.controls.incoterm.value || null,
           customer_address: this.selectedBillingAddress() || null,
           shipping_address_name: this.selectedShippingAddress() || null,
@@ -403,7 +415,8 @@ export class App {
         this.loadedPaymentSchedule = saved.payment_schedule ?? [];
         this.loadedPaymentTermName = this.loadedPaymentSchedule[0]?.payment_term ?? '';
         this.orderTaxes.set(saved.taxes ?? []);
-        this.updateItemTotals();
+        this.replaceItems(saved.items ?? []);
+        this.orderForm.controls.totalBalanceIncludingTax.setValue(String(saved.total ?? ''), { emitEvent: false });
         this.loadedCurrencySettings = {
           company: saved.company,
           selling_price_list: saved.selling_price_list,
@@ -422,9 +435,6 @@ export class App {
           : `Sales Order ${saved.name} saved successfully.`);
         this.orderForm.markAsPristine();
         this.updateOrderOption(saved);
-        if (!submitAfterSave) {
-          void this.router.navigate(['/sales-orders']);
-        }
       },
       error: (error: unknown) => this.orderError.set(this.errorMessage(error)),
     });
@@ -837,15 +847,14 @@ export class App {
       : [{ quantity: '', unit: '', productName: '', unitPrice: '', total: '' }];
 
     for (let index = 0; index < Math.min(this.itemRows.length, rowValues.length); index++) {
-      this.itemRows.at(index).patchValue(rowValues[index]);
+      this.itemRows.at(index).patchValue(rowValues[index], { emitEvent: false });
     }
     for (let index = this.itemRows.length; index < rowValues.length; index++) {
-      this.itemRows.push(this.createRow(rowValues[index]));
+      this.itemRows.push(this.createRow(rowValues[index]), { emitEvent: false });
     }
     while (this.itemRows.length > rowValues.length) {
-      this.itemRows.removeAt(this.itemRows.length - 1);
+      this.itemRows.removeAt(this.itemRows.length - 1, { emitEvent: false });
     }
-    this.updateItemTotals();
   }
 
   private getCommonItemWarehouse(items: SalesOrderRecord['items']): string {
@@ -865,6 +874,7 @@ export class App {
       customer_name: order.customer_name,
       transaction_date: order.transaction_date,
       delivery_date: order.delivery_date,
+      total: order.total,
       grand_total: order.grand_total,
       currency: order.currency,
       status: order.status,

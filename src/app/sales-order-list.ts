@@ -39,7 +39,7 @@ export class SalesOrderListPage {
       order.status,
       order.deliveryNoteStatus,
       order.salesInvoiceStatus,
-      order.grand_total === undefined ? '' : String(order.grand_total),
+      order.total === undefined ? '' : String(order.total),
     ].some((value) => value?.toLocaleLowerCase().includes(query)));
   });
 
@@ -157,7 +157,7 @@ export class SalesOrderListPage {
   }
 
   protected formatAmount(order: SalesOrderListOption): string {
-    const amount = Number(order.grand_total);
+    const amount = Number(order.total);
     if (!Number.isFinite(amount)) {
       return '—';
     }

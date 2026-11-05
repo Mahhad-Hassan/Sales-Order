@@ -67,7 +67,7 @@ export class FrappeSalesOrderService {
       ),
       orders: this.api.getList<SalesOrderListOption>(
         'Sales Order',
-        ['name', 'customer', 'customer_name', 'transaction_date', 'delivery_date', 'grand_total', 'currency', 'status', 'docstatus'],
+        ['name', 'customer', 'customer_name', 'transaction_date', 'delivery_date', 'total', 'grand_total', 'currency', 'status', 'docstatus'],
         [],
         100,
       ),
@@ -88,6 +88,7 @@ export class FrappeSalesOrderService {
           'customer_name',
           'transaction_date',
           'delivery_date',
+          'total',
           'grand_total',
           'currency',
           'status',
