@@ -10,6 +10,10 @@ export interface FrappeMessageResponse {
   message: string;
 }
 
+export interface FrappeMethodResponse<T> {
+  message: T;
+}
+
 export interface FrappeLoginResponse {
   message: string;
   full_name?: string;

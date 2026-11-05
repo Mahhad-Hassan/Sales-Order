@@ -6,6 +6,7 @@ import {
   FrappeDataResponse,
   FrappeListResponse,
   FrappeLoginResponse,
+  FrappeMethodResponse,
   FrappeMessageResponse,
 } from '../models/frappe-api.model';
 
@@ -44,10 +45,12 @@ export class FrappeApiService {
     fields: string[],
     filters: unknown[][] = [],
     limitPageLength = 20,
+    limitStart = 0,
   ): Observable<T[]> {
     let params = new HttpParams()
       .set('fields', JSON.stringify(fields))
-      .set('limit_page_length', String(limitPageLength));
+      .set('limit_page_length', String(limitPageLength))
+      .set('limit_start', String(limitStart));
 
     if (filters.length) {
       params = params.set('filters', JSON.stringify(filters));
@@ -90,6 +93,14 @@ export class FrappeApiService {
           withCredentials: true,
         })
         .pipe(map((response) => response.data)),
+    );
+  }
+
+  callMethod<T>(method: string, args: Record<string, unknown>): Observable<T> {
+    return this.request(() =>
+      this.http
+        .post<FrappeMethodResponse<T>>(this.methodUrl(method), args, { withCredentials: true })
+        .pipe(map((response) => response.message)),
     );
   }
 

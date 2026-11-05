@@ -26,15 +26,30 @@ export interface SellingPriceListOption {
 export interface SalesOrderItemRecord {
   item_code: string;
   item_name?: string;
+  description?: string;
   qty: number;
   uom?: string;
+  stock_uom?: string;
   rate: number;
+  discount_amount?: number;
+  amount?: number;
+  net_amount?: number;
+}
+
+export interface SalesOrderTaxRecord extends Record<string, unknown> {
+  description?: string;
+  account_head?: string;
+  charge_type?: string;
+  rate?: number;
+  tax_amount?: number;
+  total?: number;
 }
 
 export interface SalesOrderRecord extends Record<string, unknown> {
   name: string;
   docstatus: number;
   customer: string;
+  customer_name?: string;
   company: string;
   transaction_date: string;
   delivery_date?: string | null;
@@ -45,6 +60,20 @@ export interface SalesOrderRecord extends Record<string, unknown> {
   plc_conversion_rate: number;
   incoterm?: string | null;
   payment_terms_template?: string | null;
+  status?: string;
+  total?: number;
+  total_taxes_and_charges?: number;
+  grand_total?: number;
+  rounded_total?: number;
+  in_words?: string;
+  customer_address?: string;
+  shipping_address_name?: string;
+  shipping_address?: string;
+  address_display?: string;
+  contact_person?: string;
+  contact_mobile?: string;
+  contact_email?: string;
+  taxes?: SalesOrderTaxRecord[];
   payment_schedule?: Array<{
     payment_term?: string;
     due_date?: string;
@@ -64,6 +93,11 @@ export interface SalesOrderItemOption {
 export interface SalesOrderListOption {
   name: string;
   customer: string;
+  customer_name?: string;
   transaction_date: string;
+  delivery_date?: string | null;
+  grand_total?: number;
+  currency?: string;
+  status?: string;
   docstatus: number;
 }

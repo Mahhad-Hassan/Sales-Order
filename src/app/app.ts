@@ -12,11 +12,24 @@ import {
   SalesOrderItemOption,
   SalesOrderListOption,
   SalesOrderRecord,
+  SalesOrderTaxRecord,
   SellingPriceListOption,
 } from './models/sales-order.model';
 import { FrappeAuthService } from './services/frappe-auth.service';
 import { FrappeCustomerService } from './services/frappe-customer.service';
 import { FrappeSalesOrderService } from './services/frappe-sales-order.service';
+
+function mergeUniqueByName<T extends { name: string }>(...collections: T[][]): T[] {
+  const options = new Map<string, T>();
+  for (const collection of collections) {
+    for (const option of collection) {
+      if (!options.has(option.name)) {
+        options.set(option.name, option);
+      }
+    }
+  }
+  return [...options.values()];
+}
 
 @Component({
   imports: [ReactiveFormsModule],
@@ -37,11 +50,12 @@ export class App {
   private orderDetailsRequest = 0;
   private activeCustomerName = '';
   private orderName = '';
-  private orderDocstatus = 0;
+  protected readonly orderDocstatus = signal(0);
   private namingSeries = '';
   private initializedOrderName = '';
   private loadedPaymentSchedule: NonNullable<SalesOrderRecord['payment_schedule']> = [];
   private loadedPaymentTermName = '';
+  private loadedSalesOrderSnapshot: SalesOrderRecord | null = null;
   private loadedCurrencySettings: Pick<
     SalesOrderRecord,
     'company' | 'selling_price_list' | 'currency' | 'conversion_rate' | 'price_list_currency' | 'plc_conversion_rate'
@@ -68,6 +82,7 @@ export class App {
   protected readonly paymentTerms = signal<PaymentTermOption[]>([]);
   protected readonly salesOrderOptions = signal<SalesOrderListOption[]>([]);
   protected readonly orderItems = signal<SalesOrderItemOption[]>([]);
+  protected readonly orderTaxes = signal<SalesOrderTaxRecord[]>([]);
   protected readonly optionsLoading = signal(true);
   protected readonly orderLoading = signal(false);
   protected readonly savingOrder = signal(false);
@@ -174,11 +189,32 @@ export class App {
     }
   }
 
+  protected backToSalesOrders(): void {
+    void this.router.navigate(['/sales-orders']);
+  }
+
   protected startNewOrder(): void {
-    void this.router.navigate(['/sales-order']);
+    void this.router.navigate(['/sales-order/new']);
   }
 
   protected saveOrder(): void {
+    this.persistOrder(false);
+  }
+
+  protected submitOrder(): void {
+    if (!this.isExistingOrder() || !this.canUpdateOrder()) {
+      return;
+    }
+    this.persistOrder(true);
+  }
+
+  protected printOrder(): void {
+    if (this.orderDocstatus() === 1 && this.orderName) {
+      void this.router.navigate(['/sales-order', this.orderName, 'print']);
+    }
+  }
+
+  private persistOrder(submitAfterSave: boolean): void {
     if (this.savingOrder() || this.optionsLoading()) {
       return;
     }
@@ -291,19 +327,33 @@ export class App {
           plc_conversion_rate: priceListConversionRate,
           items,
           incoterm: this.orderForm.controls.incoterm.value || null,
+          customer_address: this.selectedBillingAddress() || null,
+          shipping_address_name: this.selectedShippingAddress() || null,
+          contact_mobile: this.orderForm.controls.billTo.controls.phoneNo.value || null,
+          contact_email: this.orderForm.controls.billTo.controls.email.value || null,
           payment_schedule: schedule,
         };
-        return this.salesOrders.saveSalesOrder(payload, this.orderName || undefined);
+        return this.salesOrders.saveSalesOrder(payload, this.orderName || undefined).pipe(
+          switchMap((saved) => submitAfterSave
+            ? this.salesOrders.submitSalesOrder(saved)
+            : of(saved)),
+        );
       }),
       finalize(() => this.savingOrder.set(false)),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
       next: (saved) => {
         this.orderName = saved.name;
+        this.loadedSalesOrderSnapshot = saved;
         this.currentOrderName.set(saved.name);
-        this.orderDocstatus = saved.docstatus;
+        this.orderDocstatus.set(saved.docstatus);
         this.loadedPaymentSchedule = saved.payment_schedule ?? [];
         this.loadedPaymentTermName = this.loadedPaymentSchedule[0]?.payment_term ?? '';
+        this.orderTaxes.set(saved.taxes ?? []);
+        this.orderForm.controls.totalBalanceIncludingTax.setValue(
+          String(saved.grand_total ?? saved.rounded_total ?? ''),
+          { emitEvent: false },
+        );
         this.loadedCurrencySettings = {
           company: saved.company,
           selling_price_list: saved.selling_price_list,
@@ -314,10 +364,15 @@ export class App {
         };
         this.isExistingOrder.set(true);
         this.canUpdateOrder.set(saved.docstatus === 0);
-        this.orderMessage.set(`Sales Order ${saved.name} saved successfully.`);
+        if (saved.docstatus === 1) {
+          this.orderForm.disable({ emitEvent: false });
+        }
+        this.orderMessage.set(submitAfterSave
+          ? `Sales Order ${saved.name} submitted successfully.`
+          : `Sales Order ${saved.name} saved successfully.`);
         this.updateOrderOption(saved);
-        if (this.route.snapshot.paramMap.get('name') !== saved.name) {
-          void this.router.navigate(['/sales-order', saved.name]);
+        if (!submitAfterSave) {
+          void this.router.navigate(['/sales-orders']);
         }
       },
       error: (error: unknown) => this.orderError.set(this.errorMessage(error)),
@@ -328,21 +383,9 @@ export class App {
     this.salesOrders.loadOptions().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (options) => {
         this.companies.set(options.companies);
-        const previouslyLoadedIncoterms = this.incoterms();
-        this.incoterms.set([
-          ...options.incoterms,
-          ...previouslyLoadedIncoterms.filter((incoterm) =>
-            !options.incoterms.some((option) => option.name === incoterm.name),
-          ),
-        ]);
+        this.incoterms.set(mergeUniqueByName(options.incoterms, this.incoterms()));
         this.orderItems.set(options.items);
-        const previouslyLoadedPaymentTerms = this.paymentTerms();
-        this.paymentTerms.set([
-          ...options.paymentTerms,
-          ...previouslyLoadedPaymentTerms.filter((term) =>
-            !options.paymentTerms.some((option) => option.name === term.name),
-          ),
-        ]);
+        this.paymentTerms.set(mergeUniqueByName(options.paymentTerms, this.paymentTerms()));
         this.priceLists.set(options.priceLists.filter((priceList) =>
           priceList.selling === 1 && priceList.enabled === 1,
         ));
@@ -381,6 +424,7 @@ export class App {
     this.currentOrderName.set(name);
     this.isExistingOrder.set(true);
     this.canUpdateOrder.set(false);
+    this.orderForm.disable({ emitEvent: false });
     this.orderLoading.set(true);
     this.orderError.set('');
     this.orderMessage.set('');
@@ -399,9 +443,10 @@ export class App {
         }
         this.orderName = order.name;
         this.currentOrderName.set(order.name);
-        this.orderDocstatus = order.docstatus;
+        this.orderDocstatus.set(order.docstatus);
         this.loadedPaymentSchedule = order.payment_schedule ?? [];
         this.loadedPaymentTermName = this.loadedPaymentSchedule[0]?.payment_term ?? '';
+        this.loadedSalesOrderSnapshot = order;
         this.loadedCurrencySettings = {
           company: order.company,
           selling_price_list: order.selling_price_list,
@@ -410,9 +455,30 @@ export class App {
           price_list_currency: order.price_list_currency,
           plc_conversion_rate: order.plc_conversion_rate,
         };
+        const savedPriceList = order.selling_price_list
+          ? {
+            name: order.selling_price_list,
+            currency: order.price_list_currency,
+            selling: 1,
+            enabled: 1,
+          }
+          : null;
+        if (savedPriceList) {
+          this.priceLists.update((priceLists) => mergeUniqueByName(priceLists, [savedPriceList]));
+        }
+        const savedItemOptions = (order.items ?? []).map((item) => ({
+          item_code: item.item_code,
+          item_name: item.item_name || item.item_code,
+          stock_uom: item.stock_uom || item.uom || '',
+        }));
+        this.orderItems.update((items) => [
+          ...items,
+          ...savedItemOptions.filter((item) => !items.some((option) => option.item_code === item.item_code)),
+        ]);
         this.isExistingOrder.set(true);
         this.canUpdateOrder.set(order.docstatus === 0);
-        this.selectedCustomerLabel.set(order.customer);
+        this.orderTaxes.set(order.taxes ?? []);
+        this.selectedCustomerLabel.set(order.customer_name || order.customer);
         this.orderForm.patchValue({
           customer: order.customer,
           date: formatDateForInput(order.transaction_date),
@@ -422,9 +488,15 @@ export class App {
           company: order.company,
           sellingPriceList: order.selling_price_list,
           paymentTerms: order.payment_schedule?.[0]?.payment_term ?? '',
+          totalBalanceIncludingTax: String(order.grand_total ?? order.rounded_total ?? ''),
         }, { emitEvent: false });
         this.selectPriceListForCompany(order.company, order.selling_price_list);
         this.replaceItems(order.items ?? []);
+        if (order.docstatus === 0) {
+          this.orderForm.enable({ emitEvent: false });
+        } else {
+          this.orderForm.disable({ emitEvent: false });
+        }
         this.activeCustomerName = '';
         this.loadSelectedCustomer(order.customer);
         const termName = order.payment_schedule?.[0]?.payment_term;
@@ -434,7 +506,7 @@ export class App {
           ).subscribe({
             next: (term) => {
               if (requestId === this.orderDetailsRequest) {
-                this.paymentTerms.update((terms) => [...terms, term]);
+                this.paymentTerms.update((terms) => mergeUniqueByName(terms, [term]));
               }
             },
             error: (error: unknown) => {
@@ -449,7 +521,7 @@ export class App {
           this.salesOrders.getIncoterm(incotermName).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
             next: (incoterm) => {
               if (requestId === this.orderDetailsRequest) {
-                this.incoterms.update((options) => [...options, incoterm]);
+                this.incoterms.update((options) => mergeUniqueByName(options, [incoterm]));
               }
             },
             error: (error: unknown) => {
@@ -475,10 +547,13 @@ export class App {
     this.currentOrderName.set('');
     this.loadedPaymentSchedule = [];
     this.loadedPaymentTermName = '';
+    this.loadedSalesOrderSnapshot = null;
     this.loadedCurrencySettings = null;
-    this.orderDocstatus = 0;
+    this.orderDocstatus.set(0);
     this.isExistingOrder.set(false);
     this.canUpdateOrder.set(true);
+    this.orderForm.enable({ emitEvent: false });
+    this.orderTaxes.set([]);
     this.selectedCustomerLabel.set('');
     this.activeCustomerName = '';
     this.customerDetailsRequest++;
@@ -497,6 +572,7 @@ export class App {
       billTo: EMPTY_CUSTOMER_PARTY,
       shipTo: EMPTY_CUSTOMER_PARTY,
     }, { emitEvent: false });
+    this.orderForm.enable({ emitEvent: false });
     this.replaceItems([]);
     this.billingAddressOptions.set([]);
     this.shippingAddressOptions.set([]);
@@ -526,7 +602,7 @@ export class App {
     }
     const matching = this.priceLists().filter((priceList) => priceList.currency === company.default_currency);
     const currentPriceList = this.orderForm.controls.sellingPriceList.value;
-    const selected = matching.find((priceList) => priceList.name === preferredPriceList)
+    const selected = this.priceLists().find((priceList) => priceList.name === preferredPriceList)
       ?? matching.find((priceList) => priceList.name === currentPriceList)
       ?? (matching.length === 1 ? matching[0] : undefined);
     this.orderForm.controls.sellingPriceList.setValue(selected?.name ?? '', { emitEvent: false });
@@ -553,19 +629,24 @@ export class App {
   }
 
   private replaceItems(items: SalesOrderRecord['items']): void {
-    this.itemRows.clear({ emitEvent: false });
-    if (!items.length) {
-      this.itemRows.push(this.createRow(), { emitEvent: false });
-      return;
+    const rowValues = items.length
+      ? items.map((item) => ({
+        quantity: String(item.qty ?? ''),
+        unit: item.uom ?? '',
+        productName: item.item_name || item.item_code,
+        unitPrice: String(item.rate ?? ''),
+        total: String(item.amount ?? item.net_amount ?? (item.qty ?? 0) * (item.rate ?? 0)),
+      }))
+      : [{ quantity: '', unit: '', productName: '', unitPrice: '', total: '' }];
+
+    for (let index = 0; index < Math.min(this.itemRows.length, rowValues.length); index++) {
+      this.itemRows.at(index).patchValue(rowValues[index]);
     }
-    for (const item of items) {
-      this.itemRows.push(this.formBuilder.group({
-        quantity: [String(item.qty ?? '')],
-        unit: [item.uom ?? ''],
-        productName: [item.item_name || item.item_code],
-        unitPrice: [String(item.rate ?? '')],
-        total: [String((item.qty ?? 0) * (item.rate ?? 0))],
-      }), { emitEvent: false });
+    for (let index = this.itemRows.length; index < rowValues.length; index++) {
+      this.itemRows.push(this.formBuilder.group(rowValues[index]));
+    }
+    while (this.itemRows.length > rowValues.length) {
+      this.itemRows.removeAt(this.itemRows.length - 1);
     }
   }
 
@@ -573,7 +654,12 @@ export class App {
     const option: SalesOrderListOption = {
       name: order.name,
       customer: order.customer,
+      customer_name: order.customer_name,
       transaction_date: order.transaction_date,
+      delivery_date: order.delivery_date,
+      grand_total: order.grand_total,
+      currency: order.currency,
+      status: order.status,
       docstatus: order.docstatus,
     };
     this.salesOrderOptions.update((orders) => [
@@ -629,9 +715,16 @@ export class App {
 
   protected get filteredPriceLists(): SellingPriceListOption[] {
     const company = this.companies().find((option) => option.name === this.orderForm.controls.company.value);
-    return company
-      ? this.priceLists().filter((priceList) => priceList.currency === company.default_currency)
-      : [];
+    if (!company) {
+      return [];
+    }
+    const matching = this.priceLists().filter((priceList) => priceList.currency === company.default_currency);
+    const selected = this.priceLists().find((priceList) =>
+      priceList.name === this.orderForm.controls.sellingPriceList.value,
+    );
+    return selected && !matching.some((priceList) => priceList.name === selected.name)
+      ? [...matching, selected]
+      : matching;
   }
 
   protected get otherSalesOrderOptions(): SalesOrderListOption[] {
@@ -662,6 +755,9 @@ export class App {
 
     if (customerChanged) {
       this.activeCustomerName = docName;
+      if (this.loadedSalesOrderSnapshot && this.loadedSalesOrderSnapshot.customer !== docName) {
+        this.loadedSalesOrderSnapshot = null;
+      }
       this.orderForm.controls.billTo.reset(EMPTY_CUSTOMER_PARTY, { emitEvent: false });
       this.orderForm.controls.shipTo.reset(EMPTY_CUSTOMER_PARTY, { emitEvent: false });
       this.billingAddressOptions.set([]);
@@ -703,10 +799,32 @@ export class App {
           this.billingAddressOptions.set(details.billToAddresses);
           this.shippingAddressOptions.set(details.shipToAddresses);
           this.customerEmails.set(details.emails);
-          this.selectedBillingAddress.set(details.billToAddresses[0]?.docName ?? '');
-          this.selectedShippingAddress.set(details.shipToAddresses[0]?.docName ?? '');
+          const savedOrder = this.loadedSalesOrderSnapshot?.customer === docName
+            ? this.loadedSalesOrderSnapshot
+            : null;
+          const selectedBillingAddress = details.billToAddresses.find((address) =>
+            address.docName === savedOrder?.customer_address,
+          ) ?? details.billToAddresses[0];
+          const selectedShippingAddress = details.shipToAddresses.find((address) =>
+            address.docName === savedOrder?.shipping_address_name,
+          ) ?? details.shipToAddresses[0];
+          this.selectedBillingAddress.set(selectedBillingAddress?.docName ?? '');
+          this.selectedShippingAddress.set(selectedShippingAddress?.docName ?? '');
           this.patchPristineParty(this.orderForm.controls.billTo, details.billTo);
           this.patchPristineParty(this.orderForm.controls.shipTo, details.shipTo);
+          if (selectedBillingAddress) {
+            this.patchPristineParty(this.orderForm.controls.billTo, selectedBillingAddress.details);
+          }
+          if (selectedShippingAddress) {
+            this.patchPristineParty(this.orderForm.controls.shipTo, selectedShippingAddress.details);
+          }
+          if (savedOrder) {
+            this.patchPristineParty(this.orderForm.controls.billTo, {
+              name: savedOrder.customer_name || savedOrder.customer,
+              phoneNo: savedOrder.contact_mobile || undefined,
+              email: savedOrder.contact_email || undefined,
+            });
+          }
           this.orderForm.controls.billTo.controls.ntn.setValue(details.taxId, { emitEvent: false });
           this.orderForm.controls.shipTo.controls.ntn.setValue(details.taxId, { emitEvent: false });
         },

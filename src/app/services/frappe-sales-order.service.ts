@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { forkJoin, map, Observable, of } from 'rxjs';
+import { EMPTY, expand, forkJoin, map, Observable, of, reduce } from 'rxjs';
 import {
   CompanyOption,
   IncotermOption,
@@ -53,7 +53,7 @@ export class FrappeSalesOrderService {
       ),
       orders: this.api.getList<SalesOrderListOption>(
         'Sales Order',
-        ['name', 'customer', 'transaction_date', 'docstatus'],
+        ['name', 'customer', 'customer_name', 'transaction_date', 'delivery_date', 'grand_total', 'currency', 'status', 'docstatus'],
         [],
         100,
       ),
@@ -65,12 +65,42 @@ export class FrappeSalesOrderService {
     return this.api.getDocument<SalesOrderRecord>('Sales Order', name);
   }
 
+  getAllSalesOrders(): Observable<SalesOrderListOption[]> {
+    const pageSize = 500;
+    const fields = [
+      'name',
+      'customer',
+      'customer_name',
+      'transaction_date',
+      'delivery_date',
+      'grand_total',
+      'currency',
+      'status',
+      'docstatus',
+    ];
+    return this.api.getList<SalesOrderListOption>('Sales Order', fields, [], pageSize).pipe(
+      expand((page, index) => page.length === pageSize
+        ? this.api.getList<SalesOrderListOption>('Sales Order', fields, [], pageSize, (index + 1) * pageSize)
+        : EMPTY),
+      reduce((orders, page) => {
+        orders.push(...page);
+        return orders;
+      }, [] as SalesOrderListOption[]),
+    );
+  }
+
   getPaymentTerm(name: string): Observable<PaymentTermOption> {
     return this.api.getDocument<PaymentTermOption>('Payment Term', name);
   }
 
   getIncoterm(name: string): Observable<IncotermOption> {
     return this.api.getDocument<IncotermOption>('Incoterm', name);
+  }
+
+  submitSalesOrder(order: SalesOrderRecord): Observable<SalesOrderRecord> {
+    return this.api.callMethod<SalesOrderRecord>('frappe.client.submit', {
+      doc: JSON.stringify(order),
+    });
   }
 
   saveSalesOrder(

@@ -30,6 +30,7 @@
           aria-haspopup="listbox"
           [attr.aria-busy]="customerDetailsLoading()"
           [attr.aria-expanded]="customerDropdownOpen()"
+          [disabled]="orderForm.disabled"
           (click)="toggleCustomerDropdown()"
           (keydown.escape)="closeCustomerDropdown()"
         >
@@ -71,6 +72,11 @@
       </div>
     </header>
     <div class="mb-3 flex flex-wrap items-center justify-end gap-2 text-sm">
+      <button
+        class="min-h-[34px] border border-[#6c8753] bg-[#e6eddc] px-3 text-xs font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7]"
+        type="button"
+        (click)="backToSalesOrders()"
+      >Sales Order List</button>
       <label class="sr-only" for="existing-order">Open existing Sales Order</label>
       <select
         id="existing-order"
@@ -111,7 +117,9 @@
       <p class="mb-2 text-sm text-[#355224]" role="status">{{ orderMessage() }}</p>
     }
     @if (isExistingOrder() && !canUpdateOrder() && !orderLoading()) {
-      <p class="mb-2 text-sm text-[#8b3c2c]" role="status">This Sales Order is submitted and is read-only.</p>
+      <p class="mb-2 text-sm text-[#8b3c2c]" role="status">
+        {{ orderDocstatus() === 1 ? 'This Sales Order is submitted and is read-only.' : 'This Sales Order is cancelled and is read-only.' }}
+      </p>
     }
     <section class="mb-3 grid grid-cols-2 border border-[#a6a6a6] max-[700px]:grid-cols-1" aria-label="ERPNext order settings">
       <label class="flex min-w-0 flex-col border-r border-[#a6a6a6] max-[700px]:border-r-0">
@@ -156,6 +164,7 @@
             <select
               id="bill-address"
               aria-label="POSTAL ADDRESS"
+              [disabled]="orderForm.disabled"
               [value]="selectedBillingAddress()"
               (change)="selectBillingAddress($event)"
             >
@@ -184,6 +193,7 @@
                 class="email-dropdown-toggle"
                 type="button"
                 aria-label="Choose billing email"
+                [disabled]="orderForm.disabled"
                 [attr.aria-expanded]="billingEmailDropdownOpen()"
                 (click)="toggleEmailDropdown('billTo')"
               ></button>
@@ -225,6 +235,7 @@
             <select
               id="ship-address"
               aria-label="POSTAL ADDRESS"
+              [disabled]="orderForm.disabled"
               [value]="selectedShippingAddress()"
               (change)="selectShippingAddress($event)"
             >
@@ -253,6 +264,7 @@
                 class="email-dropdown-toggle"
                 type="button"
                 aria-label="Choose shipping email"
+                [disabled]="orderForm.disabled"
                 [attr.aria-expanded]="shippingEmailDropdownOpen()"
                 (click)="toggleEmailDropdown('shipTo')"
               ></button>
@@ -346,7 +358,7 @@
                   <div class="flex h-[38px] items-stretch">
                     <input class="h-full w-full min-w-0 flex-1 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Total" type="text" formControlName="total" />
                     @if (rowIndex > 0) {
-                      <button class="flex-none border-0 border-l border-[#b9b9b9] bg-[#f3f5ef] px-2 text-[11px] text-[#4a4a4a] cursor-pointer hover:bg-[#f7c58c]" type="button" aria-label="Remove Row" (click)="removeRow(rowIndex)">
+                      <button class="flex-none border-0 border-l border-[#b9b9b9] bg-[#f3f5ef] px-2 text-[11px] text-[#4a4a4a] cursor-pointer hover:bg-[#f7c58c] disabled:cursor-not-allowed disabled:opacity-50" type="button" aria-label="Remove Row" [disabled]="orderForm.disabled" (click)="removeRow(rowIndex)">
                         Remove
                       </button>
                     }
@@ -367,7 +379,7 @@
         </table>
       </div>
       <div class="flex justify-end pt-[9px]">
-        <button class="inline-flex min-h-[34px] items-center gap-[7px] rounded-sm border border-[#6c8753] bg-[#e6eddc] px-3 text-[13px] font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7]" type="button" (click)="addRow()"><span class="text-[18px] leading-none" aria-hidden="true">+</span> Add Row</button>
+        <button class="inline-flex min-h-[34px] items-center gap-[7px] rounded-sm border border-[#6c8753] bg-[#e6eddc] px-3 text-[13px] font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7] disabled:cursor-not-allowed disabled:opacity-50" type="button" [disabled]="orderForm.disabled" (click)="addRow()"><span class="text-[18px] leading-none" aria-hidden="true">+</span> Add Row</button>
       </div>
       <datalist id="sales-order-items">
         @for (item of orderItems(); track item.item_code) {
@@ -375,13 +387,56 @@
         }
       </datalist>
     </section>
-    <div class="mt-4 flex justify-end">
-      <button
-        class="min-h-[38px] rounded-sm border border-[#526a3e] bg-[#355224] px-5 text-sm font-bold text-white cursor-pointer hover:bg-[#283e1d] disabled:cursor-not-allowed disabled:opacity-60"
-        type="button"
-        [disabled]="savingOrder() || optionsLoading() || orderLoading() || (isExistingOrder() && !canUpdateOrder())"
-        (click)="saveOrder()"
-      >{{ savingOrder() ? 'Saving...' : isExistingOrder() ? 'Update Sales Order' : 'Save Sales Order' }}</button>
+    @if (orderTaxes().length) {
+      <section class="mt-4" aria-label="Saved taxes and charges">
+        <h2 class="m-0 border border-b-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-2 text-xs font-bold">TAXES AND CHARGES</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[560px] border-collapse text-left text-xs text-[#222]">
+            <thead class="bg-[#eaf0e2]">
+              <tr>
+                <th class="border border-[#a6a6a6] px-2 py-2">Description</th>
+                <th class="border border-[#a6a6a6] px-2 py-2">Account</th>
+                <th class="border border-[#a6a6a6] px-2 py-2 text-right">Rate</th>
+                <th class="border border-[#a6a6a6] px-2 py-2 text-right">Tax Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (tax of orderTaxes(); track $index) {
+                <tr>
+                  <td class="border border-[#d3d3d3] px-2 py-2">{{ tax.description || tax.charge_type || '—' }}</td>
+                  <td class="border border-[#d3d3d3] px-2 py-2">{{ tax.account_head || '—' }}</td>
+                  <td class="border border-[#d3d3d3] px-2 py-2 text-right">{{ tax.rate ?? '—' }}{{ tax.rate === undefined ? '' : '%' }}</td>
+                  <td class="border border-[#d3d3d3] px-2 py-2 text-right">{{ tax.tax_amount ?? '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+    <div class="mt-4 flex flex-wrap justify-end gap-2">
+      @if (orderDocstatus() === 1) {
+        <button
+          class="min-h-[38px] rounded-sm border border-[#6c8753] bg-[#e6eddc] px-5 text-sm font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7]"
+          type="button"
+          (click)="printOrder()"
+        >Print</button>
+      } @else {
+        @if (isExistingOrder() && canUpdateOrder()) {
+          <button
+            class="min-h-[38px] rounded-sm border border-[#6c8753] bg-[#e6eddc] px-5 text-sm font-bold text-[#304322] cursor-pointer hover:bg-[#d6e2c7] disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            [disabled]="savingOrder() || optionsLoading() || orderLoading()"
+            (click)="submitOrder()"
+          >{{ savingOrder() ? 'Saving and submitting...' : 'Submit Sales Order' }}</button>
+        }
+        <button
+          class="min-h-[38px] rounded-sm border border-[#526a3e] bg-[#355224] px-5 text-sm font-bold text-white cursor-pointer hover:bg-[#283e1d] disabled:cursor-not-allowed disabled:opacity-60"
+          type="button"
+          [disabled]="savingOrder() || optionsLoading() || orderLoading() || (isExistingOrder() && !canUpdateOrder())"
+          (click)="saveOrder()"
+        >{{ savingOrder() ? 'Saving...' : isExistingOrder() ? 'Update Sales Order' : 'Save Sales Order' }}</button>
+      }
     </div>
   </form>
 </main>
