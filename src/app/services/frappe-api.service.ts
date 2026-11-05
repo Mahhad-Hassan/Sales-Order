@@ -152,6 +152,11 @@ export class FrappeApiService {
       if (isLoginRequest && error.status === 429) {
         return new Error('Frappe is temporarily rate-limiting login attempts. Wait a moment and try again.');
       }
+      if (error.status === 403 && error.headers.get('cf-mitigated') === 'challenge') {
+        return new Error(
+          'Cloudflare blocked the Frappe API request with a security challenge. The Frappe/Cloudflare administrator must allow the Vercel proxy for the required API routes; this challenge cannot be completed by the login API client.',
+        );
+      }
       if (error.status === 401) {
         return new Error('Frappe sign-in is required or the session has expired.');
       }
