@@ -1,24 +1,229 @@
-.mobile-record-label {
-  display: none;
+:host {
+  display: block;
+  color: #1c2b26;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+}
+
+.sales-order-list-page {
+  background: #f4f7f5;
+}
+
+.sales-order-list-topbar {
+  z-index: 1;
+  background: #fff;
+  border-color: #e3eae6;
+}
+
+.sales-order-list-brand {
+  color: #14332b;
+}
+
+.sales-order-list-brand small {
+  color: #6d7d77;
+}
+
+.sales-order-list-logo {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2d8a70, #14332b);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sales-order-list-user {
+  color: #24765f;
+}
+
+.sign-out-button {
+  border-color: #e3eae6;
+  color: #b4432f;
+}
+
+.sign-out-button:hover {
+  background: #fff7f6;
+}
+
+.sales-order-list-hero {
+  background: linear-gradient(120deg, #14332b, #24765f);
+}
+
+.sales-order-list-content {
+  position: relative;
+}
+
+.sales-order-records-card {
+  border-color: #e3eae6;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(20 51 43 / 6%);
+}
+
+.sales-order-records-heading {
+  min-height: 31px;
+  color: #1c2b26;
+}
+
+.record-count {
+  background: #e6f3ee;
+  color: #24765f;
+}
+
+.sales-order-search-field > span:first-child {
+  color: #6d7d77;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.sales-order-search-box {
+  min-width: 0;
+}
+
+.sales-order-search-input {
+  border-color: #e3eae6;
+  background: #fbfdfc;
+  color: #1c2b26;
+}
+
+.sales-order-search-input::placeholder {
+  color: #9aa9a2;
+}
+
+.sales-order-search-input:focus {
+  border-color: #24765f;
+  box-shadow: 0 0 0 3px rgb(36 118 95 / 18%);
+}
+
+.search-icon {
+  position: absolute;
+  z-index: 1;
+  left: 13px;
+  width: 13px;
+  height: 13px;
+  border: 1.7px solid #81928a;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.search-icon::after {
+  position: absolute;
+  right: -5px;
+  bottom: -3px;
+  width: 6px;
+  height: 1.7px;
+  transform: rotate(45deg);
+  transform-origin: left center;
+  background: #81928a;
+  content: "";
+}
+
+.refresh-button {
+  border-color: #b9dccf;
+  background: #e6f3ee;
+  color: #24765f;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: #d7eee5;
+}
+
+.new-sales-order-button {
+  background: #24765f;
+  box-shadow: 0 6px 16px rgb(36 118 95 / 24%);
+}
+
+.new-sales-order-button:hover {
+  background: #1b604d;
+}
+
+.sales-order-list-error {
+  border-color: #f1d4d0;
+  background: #fff7f6;
+  color: #a34539;
+}
+
+.try-again-button {
+  border-color: #e8bdb7;
+  color: #a34539;
+}
+
+.sales-order-list-notice {
+  border-color: #dfe8e3;
+  color: #6d7d77;
+}
+
+.sales-order-list-header {
+  color: #81928a;
+  font-size: 10px;
+  letter-spacing: 0.65px;
+  text-transform: uppercase;
+}
+
+.sales-order-list-item {
+  position: relative;
+  border-color: #e3eae6;
+  border-left: 3px solid #cfe7dd;
+  background: #fbfdfc;
+  color: #1c2b26;
+}
+
+.sales-order-list-item:hover {
+  border-color: #9fcdbd;
+  border-left-color: #79b9a2;
+  background: #f3f9f6;
+}
+
+.sales-order-list-item:focus-visible {
+  outline-color: #24765f;
+}
+
+.sales-order-record-id {
+  color: #24765f;
+}
+
+.sales-order-customer {
+  color: #344a42;
+}
+
+.sales-order-date {
+  color: #344a42;
+}
+
+.delivery-date {
+  margin-top: 2px;
+  color: #81928a;
+  font-weight: 400;
+}
+
+.sales-order-amount {
+  color: #14332b;
+}
+
+.sales-order-status-cell {
+  color: #6d7d77;
 }
 
 .workflow-status-list {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .workflow-status-badge {
   display: inline-flex;
+  min-height: 21px;
   align-items: center;
   justify-content: center;
-  min-height: 23px;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
@@ -57,6 +262,10 @@
   color: #586760;
 }
 
+.mobile-record-label {
+  display: none;
+}
+
 @media (max-width: 760px) {
   .sales-order-list-header {
     display: none;
@@ -64,18 +273,32 @@
 
   .sales-order-list-item {
     justify-items: start;
+    row-gap: 12px;
   }
 
   .mobile-record-label {
     display: block;
     margin-bottom: 3px;
-    color: #71807a;
-    font-size: 11px;
+    color: #81928a;
+    font-size: 10px;
     font-weight: 700;
+    letter-spacing: 0.45px;
     line-height: 1.4;
+    text-transform: uppercase;
   }
 
   .workflow-status-list {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 580px) {
+  .sales-order-list-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sales-order-list-actions > * {
+    width: 100%;
   }
 }
