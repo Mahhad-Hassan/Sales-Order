@@ -36,6 +36,10 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
+## Vercel deployment
+
+Production API requests use the same-origin `/api/frappe-proxy` function in `api/frappe-proxy/[...path].js`. Set the `FRAPPE_BACKEND_URL` Vercel environment variable to the HTTPS Frappe origin (for example, `https://dev04.agrovisions.pk`) for both Production and Preview deployments, then redeploy. The function forwards Frappe session cookies without logging them. Local development continues to use `src/proxy.conf.json`.
+
 ## Running unit tests
 
 To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:

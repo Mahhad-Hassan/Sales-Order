@@ -122,8 +122,9 @@ export class FrappeApiService {
 
     const isHttps = baseUrl.startsWith('https://');
     const isDevelopmentHttp = !environment.production && baseUrl.startsWith('http://');
+    const isProductionProxy = environment.production && baseUrl === '/api/frappe-proxy';
 
-    if (!isHttps && !isDevelopmentHttp) {
+    if (!isHttps && !isDevelopmentHttp && !isProductionProxy) {
       throw new Error(environment.production
         ? 'Configure a reachable HTTPS Frappe URL before connecting.'
         : 'Configure an HTTP or HTTPS Frappe URL before connecting.');
