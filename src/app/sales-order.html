@@ -19,7 +19,7 @@
     }
   </header>
 
-  <main class="mx-auto w-full max-w-[1360px] px-[clamp(16px,3vw,48px)] pb-7 pt-10 max-[580px]:[padding:28px_14px_24px]">
+  <main class="w-full px-4 pb-7 pt-8 max-[580px]:[padding:28px_14px_24px]">
     <section class="mb-7 flex justify-center text-center max-[580px]:mb-5">
       <div>
         <p class="m-0 text-[16px] font-extrabold tracking-[0.3px] text-[#399477]">Sales Order Management</p>
@@ -43,7 +43,7 @@
         </span>
       </div>
 
-      <form class="mx-auto w-full max-w-[1120px] px-[clamp(0px,1vw,10px)]" [formGroup]="orderForm">
+      <form class="w-full px-[clamp(0px,1vw,10px)]" [formGroup]="orderForm">
     <label class="mb-4 flex max-w-[520px] flex-col gap-[6px] text-sm font-bold text-[#43564f]" for="source-warehouse">
       <span>Source Warehouse</span>
       <select
@@ -169,7 +169,7 @@
       </p>
     }
     @if (customerLoadError() && !customerDropdownOpen() && selectedCustomerLabel()) {
-      <p class="mx-auto mt-[-10px] mb-3 w-full max-w-[1120px] text-sm text-[#8b3c2c]" role="alert">
+      <p class="mt-[-10px] mb-3 w-full text-sm text-[#8b3c2c]" role="alert">
         {{ customerLoadError() }}
       </p>
     }
