@@ -19,6 +19,7 @@ export class SalesOrderListPage {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly orders = signal<SalesOrderListOption[]>([]);
+  protected readonly workflowStateStyles = signal<Record<string, string>>({});
   protected readonly searchText = signal('');
   protected readonly loading = signal(true);
   protected readonly error = signal('');
@@ -53,10 +54,12 @@ export class SalesOrderListPage {
         return forkJoin({
           salesOrders: this.salesOrders.getSalesOrderStatuses(orderNames),
           linkedDocuments: this.salesOrders.getLinkedDocumentStatuses(orderNames),
+          workflowStyles: this.salesOrders.getWorkflowStateStyles(),
         }).pipe(
-          map(({ salesOrders, linkedDocuments }) => ({
+          map(({ salesOrders, linkedDocuments, workflowStyles }) => ({
             salesOrders,
             linkedDocuments,
+            workflowStyles,
           })),
           catchError((error: unknown) => {
             this.error.set(error instanceof Error
@@ -67,13 +70,14 @@ export class SalesOrderListPage {
         );
       }),
       takeUntilDestroyed(this.destroyRef),
-    ).subscribe(({ salesOrders, linkedDocuments }) => {
+    ).subscribe(({ salesOrders, linkedDocuments, workflowStyles }) => {
       this.orders.update((orders) => orders.map((order) => ({
         ...order,
         salesOrderStatus: salesOrders[order.name] ?? order.salesOrderStatus,
         deliveryNoteStatus: linkedDocuments[order.name]?.deliveryNoteStatus ?? order.deliveryNoteStatus,
         salesInvoiceStatus: linkedDocuments[order.name]?.salesInvoiceStatus ?? order.salesInvoiceStatus,
       })));
+      this.workflowStateStyles.set(workflowStyles);
     });
   }
 
@@ -93,16 +97,23 @@ export class SalesOrderListPage {
     this.loading.set(true);
     this.error.set('');
     this.salesOrders.getAllSalesOrders().pipe(
-      switchMap((orders) => this.salesOrders.getLinkedDocumentStatuses(orders.map((order) => order.name)).pipe(
-        map((linkedStatuses) => orders.map((order) => ({
-          ...order,
-          ...linkedStatuses[order.name],
-        }))),
+      switchMap((orders) => forkJoin({
+        linkedStatuses: this.salesOrders.getLinkedDocumentStatuses(orders.map((order) => order.name)),
+        workflowStyles: this.salesOrders.getWorkflowStateStyles(),
+      }).pipe(
+        map(({ linkedStatuses, workflowStyles }) => ({
+          orders: orders.map((order) => ({
+            ...order,
+            ...linkedStatuses[order.name],
+          })),
+          workflowStyles,
+        })),
       )),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
-      next: (orders) => {
+      next: ({ orders, workflowStyles }) => {
         this.orders.set(orders);
+        this.workflowStateStyles.set(workflowStyles);
         this.loading.set(false);
       },
       error: (error: unknown) => {
@@ -120,6 +131,29 @@ export class SalesOrderListPage {
       return order.status;
     }
     return order.docstatus === 1 ? 'Submitted' : order.docstatus === 2 ? 'Cancelled' : 'Draft';
+  }
+
+  protected statusValues(status: string | undefined): string[] {
+    return status?.split(',').map((value) => value.trim()).filter(Boolean) ?? [];
+  }
+
+  protected statusStyleClass(status: string): string {
+    switch ((this.workflowStateStyles()[status] ?? '').toLocaleLowerCase()) {
+      case 'success':
+        return 'workflow-status-success';
+      case 'danger':
+        return 'workflow-status-danger';
+      case 'inverse':
+        return 'workflow-status-inverse';
+      case 'primary':
+        return 'workflow-status-primary';
+      case 'info':
+        return 'workflow-status-info';
+      case 'warning':
+        return 'workflow-status-warning';
+      default:
+        return 'workflow-status-default';
+    }
   }
 
   protected formatAmount(order: SalesOrderListOption): string {

@@ -13,6 +13,7 @@ import {
   SellingPriceListOption,
   WarehouseOption,
   WorkflowConfiguration,
+  WorkflowStateOption,
 } from '../models/sales-order.model';
 import { FrappeDocTypeMetadata } from '../models/frappe-api.model';
 import { FrappeApiService } from './frappe-api.service';
@@ -128,6 +129,20 @@ export class FrappeSalesOrderService {
             || this.documentStatus(order.docstatus),
         ]))),
       )),
+    );
+  }
+
+  getWorkflowStateStyles(): Observable<Record<string, string>> {
+    return this.api.getList<WorkflowStateOption>(
+      'Workflow State',
+      ['name', 'style'],
+      [],
+      1000,
+    ).pipe(
+      map((states) => Object.fromEntries(states.map((state) => [
+        state.name,
+        state.style?.trim() ?? '',
+      ]))),
     );
   }
 

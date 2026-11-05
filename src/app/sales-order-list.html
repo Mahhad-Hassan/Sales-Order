@@ -100,13 +100,28 @@
                 <small class="mobile-record-label">Grand Total</small>{{ formatAmount(order) }}
               </span>
               <span class="text-base font-bold text-[#71807a] max-[760px]:text-left min-[761px]:text-center" role="cell">
-                <small class="mobile-record-label">Sales Order</small>{{ orderStatus(order) }}
+                <small class="mobile-record-label">Sales Order</small>
+                <span class="workflow-status-list">
+                  @for (status of statusValues(orderStatus(order)); track status) {
+                    <span class="workflow-status-badge" [class]="statusStyleClass(status)">{{ status }}</span>
+                  }
+                </span>
               </span>
               <span class="text-base font-bold text-[#71807a] max-[760px]:text-left min-[761px]:text-center" role="cell">
-                <small class="mobile-record-label">Delivery Note</small>{{ order.deliveryNoteStatus || '—' }}
+                <small class="mobile-record-label">Delivery Note</small>
+                <span class="workflow-status-list">
+                  @for (status of statusValues(order.deliveryNoteStatus); track status) {
+                    <span class="workflow-status-badge" [class]="statusStyleClass(status)">{{ status }}</span>
+                  }
+                </span>
               </span>
               <span class="text-base font-bold text-[#71807a] max-[760px]:text-left min-[761px]:text-center" role="cell">
-                <small class="mobile-record-label">Sales Invoice</small>{{ order.salesInvoiceStatus || '—' }}
+                <small class="mobile-record-label">Sales Invoice</small>
+                <span class="workflow-status-list">
+                  @for (status of statusValues(order.salesInvoiceStatus); track status) {
+                    <span class="workflow-status-badge" [class]="statusStyleClass(status)">{{ status }}</span>
+                  }
+                </span>
               </span>
             </button>
           }

@@ -144,3 +144,8 @@ export interface WorkflowConfiguration {
   workflow_state_field: string;
   is_active: number;
 }
+
+export interface WorkflowStateOption {
+  name: string;
+  style: string;
+}
