@@ -1,5 +1,5 @@
 <main class="print-page min-h-screen bg-[#eef1eb] p-6 max-[700px]:p-2">
-  <div class="print-toolbar mx-auto mb-4 flex max-w-[900px] items-center justify-between gap-3">
+  <div class="print-toolbar mx-auto mb-4 flex max-w-[1120px] items-center justify-between gap-3">
     <a class="text-sm font-semibold text-[#355224] underline" routerLink="/sales-orders">Back to Sales Orders</a>
     @if (order()) {
       <button class="min-h-[38px] border border-[#526a3e] bg-[#355224] px-4 text-sm font-bold text-white cursor-pointer hover:bg-[#283e1d]" type="button" (click)="print()">Print</button>
@@ -7,119 +7,141 @@
   </div>
 
   @if (loading()) {
-    <p class="mx-auto max-w-[900px] border border-[#d6ddcf] bg-white px-4 py-8 text-center text-sm text-[#555]" role="status">Loading Sales Order...</p>
+    <p class="mx-auto max-w-[1120px] rounded-lg border border-dashed border-[#dfe8e3] bg-white px-4 py-8 text-center text-base text-[#71807a]" role="status">Loading Sales Order...</p>
   } @else if (error()) {
-    <p class="mx-auto max-w-[900px] border border-[#e4b7aa] bg-[#fff4f0] px-4 py-5 text-sm text-[#8b3c2c]" role="alert">{{ error() }}</p>
+    <p class="mx-auto max-w-[1120px] rounded-lg border border-[#f1d4d0] bg-[#fff7f6] px-4 py-5 text-base text-[#a34539]" role="alert">{{ error() }}</p>
   } @else if (order(); as savedOrder) {
-    <article class="print-document mx-auto max-w-[900px] border border-[#a6a6a6] bg-white p-8 text-[#222] shadow-[0_3px_14px_rgb(34_53_34_/_8%)] max-[700px]:p-4">
-      <header class="mb-6 flex items-start justify-between gap-4 border-b-2 border-[#355224] pb-4">
-        <div class="flex items-center gap-3">
-          <img class="h-[64px] w-auto object-contain" src="/AgroVisions%20Logo.png" alt="AgroVisions logo" />
-          <div>
-            <h1 class="m-0 text-2xl font-bold text-[#355224]">Sales Order</h1>
-            <p class="m-0 mt-1 text-sm">{{ savedOrder.company }}</p>
-          </div>
+    <article class="print-document mx-auto w-full max-w-[1120px] border border-[#a6a6a6] bg-white px-[30px] pt-[26px] pb-6 text-[#222] shadow-[0_3px_14px_rgb(34_53_34_/_8%)] max-[700px]:px-3 max-[700px]:pt-4 max-[700px]:pb-[18px]">
+      @if (customerDetailsError()) {
+        <p class="print-error mb-3 rounded-lg border border-[#f1d4d0] bg-[#fff7f6] px-3 py-2 text-sm text-[#a34539]" role="alert">{{ customerDetailsError() }}</p>
+      }
+
+      <header class="print-order-header mb-[18px] grid grid-cols-[1.09fr_1.29fr_repeat(4,1fr)_1.29fr_repeat(3,1fr)] grid-rows-[74px_48px]">
+        <div class="col-[1/7] row-[1/2] flex items-center gap-3 pl-1 font-[Arial,sans-serif] text-4xl font-bold text-[#355224] max-[700px]:text-[28px]">
+          <span>AGROVISIONS</span>
+          <img class="block h-[74px] w-auto object-contain" src="/AgroVisions%20Logo.png" alt="AgroVisions logo" />
         </div>
-        <div class="text-right text-sm">
-          <p class="m-0 font-bold">{{ savedOrder.name }}</p>
-          <p class="m-0 mt-1">Status: {{ savedOrder.status || 'Submitted' }}</p>
-          <p class="m-0 mt-1">Date: {{ savedOrder.transaction_date }}</p>
+        <div class="col-[9/11] row-[1/3] flex h-[38px] min-w-0 flex-wrap items-center justify-between gap-[5px] self-end overflow-hidden border border-[#a6a6a6] bg-white px-2 text-xs">
+          <strong>Date:</strong>
+          <span>{{ displayDate(savedOrder.transaction_date) }}</span>
+        </div>
+        <div class="col-[1/4] row-[2/3] flex min-w-0 items-center border border-[#858585] px-[10px] text-[18px] font-bold text-[#353535] max-[700px]:px-[6px] max-[700px]:text-sm">
+          Sales Order (V4)
+        </div>
+        <div class="col-[4/7] row-[2/3] flex min-w-0 items-center justify-center border border-[#858585] px-2 text-center text-[15px] font-bold text-[#353535]">
+          {{ savedOrder.customer_name || savedOrder.customer }}
         </div>
       </header>
 
-      <section class="mb-6 grid grid-cols-2 gap-6 text-sm max-[600px]:grid-cols-1">
-        <div>
-          <h2 class="mb-2 border-b border-[#a6a6a6] bg-[#f7c58c] px-2 py-1 text-xs font-bold">CUSTOMER</h2>
-          <p class="m-0 font-semibold">{{ savedOrder.customer_name || savedOrder.customer }}</p>
-          @if (savedOrder.customer_address) {
-            <p class="m-0 mt-1">{{ savedOrder.customer_address }}</p>
-          }
-          @if (savedOrder.address_display || savedOrder.customer_address) {
-            <div class="mt-1 whitespace-pre-line" [innerHTML]="savedOrder.address_display || savedOrder.customer_address"></div>
-          }
-          @if (savedOrder.contact_person) {
-            <p class="m-0 mt-1">Contact: {{ savedOrder.contact_person }}</p>
-          }
-          @if (savedOrder.contact_mobile) {
-            <p class="m-0 mt-1">Phone: {{ savedOrder.contact_mobile }}</p>
-          }
-          @if (savedOrder.contact_email) {
-            <p class="m-0 mt-1">Email: {{ savedOrder.contact_email }}</p>
-          }
-        </div>
-        <div>
-          <h2 class="mb-2 border-b border-[#a6a6a6] bg-[#f7c58c] px-2 py-1 text-xs font-bold">ORDER DETAILS</h2>
-          <p class="m-0">Delivery Date: {{ savedOrder.delivery_date || '—' }}</p>
-          <p class="m-0 mt-1">Payment Terms: {{ savedOrder.payment_terms_template || savedOrder.payment_schedule?.[0]?.payment_term || '—' }}</p>
-          <p class="m-0 mt-1">Due Date: {{ savedOrder.payment_schedule?.[0]?.due_date || '—' }}</p>
-          <p class="m-0 mt-1">Incoterm: {{ savedOrder.incoterm || '—' }}</p>
-        </div>
-      </section>
-
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-[650px] border-collapse text-left text-xs">
-          <thead class="bg-[#c3d69b]">
-            <tr>
-              <th class="border border-[#a6a6a6] px-2 py-2">Item</th>
-              <th class="border border-[#a6a6a6] px-2 py-2">Description</th>
-              <th class="border border-[#a6a6a6] px-2 py-2 text-right">Qty</th>
-              <th class="border border-[#a6a6a6] px-2 py-2">UOM</th>
-              <th class="border border-[#a6a6a6] px-2 py-2 text-right">Rate</th>
-              <th class="border border-[#a6a6a6] px-2 py-2 text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (item of savedOrder.items || []; track $index) {
-              <tr>
-                <td class="border border-[#d3d3d3] px-2 py-2">{{ item.item_code }}<br />{{ item.item_name }}</td>
-                <td class="border border-[#d3d3d3] px-2 py-2 whitespace-pre-line">{{ item.description || '—' }}</td>
-                <td class="border border-[#d3d3d3] px-2 py-2 text-right">{{ item.qty }}</td>
-                <td class="border border-[#d3d3d3] px-2 py-2">{{ item.uom || '—' }}</td>
-                <td class="border border-[#d3d3d3] px-2 py-2 text-right">{{ amount(item.rate) }}</td>
-                <td class="border border-[#d3d3d3] px-2 py-2 text-right">{{ amount(item.amount ?? item.net_amount) }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+      <div class="print-record-reference mb-3 flex items-center justify-between gap-2 text-xs text-[#555]">
+        <strong>Sales Order ID: {{ savedOrder.name }}</strong>
+        <span>Status: {{ savedOrder.status || 'Submitted' }}</span>
       </div>
 
-      @if (savedOrder.taxes?.length) {
-        <section class="mt-6">
-          <h2 class="mb-2 border-b border-[#a6a6a6] bg-[#91cddd] px-2 py-1 text-xs font-bold">TAXES AND CHARGES</h2>
-          <table class="w-full border-collapse text-left text-xs">
-            <thead class="bg-[#eaf0e2]">
+      <section class="print-parties grid grid-cols-2 border border-[#a6a6a6] max-[700px]:grid-cols-1" aria-label="Order parties">
+        <section class="min-w-0 pb-2">
+          <h2 class="m-0 mb-2 border-b border-[#a6a6a6] bg-[#f7c58c] px-2 py-[5px] text-center text-sm leading-[1.3]">BILL TO:</h2>
+          <div class="print-party-field"><strong>NAME</strong><span>{{ savedOrder.customer_name || savedOrder.customer }}</span></div>
+          <div class="print-party-field"><strong>COMPANY NAME</strong><span>{{ savedOrder.company || '—' }}</span></div>
+          <div class="print-party-field print-address-field"><strong>POSTAL ADDRESS</strong><span [innerHTML]="billingAddress() || '—'"></span></div>
+          <div class="print-party-field"><strong>PHONE NO</strong><span>{{ savedOrder.contact_mobile || billingParty()?.phoneNo || '—' }}</span></div>
+          <div class="print-party-field"><strong>FAX NO</strong><span>{{ billingParty()?.faxNo || '—' }}</span></div>
+          <div class="print-party-field"><strong>EMAIL</strong><span>{{ savedOrder.contact_email || billingParty()?.email || '—' }}</span></div>
+          <div class="print-party-field"><strong>NTN</strong><span>{{ customer()?.taxId || '—' }}</span></div>
+        </section>
+
+        <section class="min-w-0 border-l border-[#a6a6a6] pb-2 max-[700px]:border-l-0 max-[700px]:border-t">
+          <h2 class="m-0 mb-2 border-b border-[#a6a6a6] bg-[#f7c58c] px-2 py-[5px] text-center text-sm leading-[1.3]">SHIP TO:</h2>
+          <div class="print-party-field"><strong>NAME</strong><span>{{ savedOrder.customer_name || savedOrder.customer }}</span></div>
+          <div class="print-party-field"><strong>COMPANY NAME</strong><span>{{ savedOrder.company || '—' }}</span></div>
+          <div class="print-party-field print-address-field"><strong>POSTAL ADDRESS</strong><span [innerHTML]="shippingAddress() || '—'"></span></div>
+          <div class="print-party-field"><strong>PHONE NO</strong><span>{{ shippingParty()?.phoneNo || savedOrder.contact_mobile || '—' }}</span></div>
+          <div class="print-party-field"><strong>FAX NO</strong><span>{{ shippingParty()?.faxNo || '—' }}</span></div>
+          <div class="print-party-field"><strong>EMAIL</strong><span>{{ shippingParty()?.email || savedOrder.contact_email || '—' }}</span></div>
+          <div class="print-party-field"><strong>NTN</strong><span>{{ customer()?.taxId || '—' }}</span></div>
+        </section>
+      </section>
+
+      <section class="print-order-terms mt-2 grid grid-cols-4 border-t border-l border-[#a6a6a6] max-[700px]:grid-cols-2" aria-label="Order dates and terms">
+        <div class="print-term-cell"><strong>DELIVERY DATE</strong><span>{{ displayDate(savedOrder.delivery_date) }}</span></div>
+        <div class="print-term-cell"><strong>DUE DATE</strong><span>{{ displayDate(savedOrder.payment_schedule?.[0]?.due_date) }}</span></div>
+        <div class="print-term-cell"><strong>PAYMENT TERMS</strong><span>{{ paymentTermName() }}</span></div>
+        <div class="print-term-cell"><strong>INCOTERM</strong><span>{{ incotermTitle() }}</span></div>
+      </section>
+
+      <section class="mt-[17px]" aria-label="Quantity">
+        <div class="overflow-x-auto">
+          <table class="print-items-table w-full min-w-[760px] table-fixed border-collapse text-[13px] text-[#222]">
+            <colgroup>
+              <col class="w-[10.2%]" />
+              <col class="w-[12.1%]" />
+              <col class="w-[9.3%]" />
+              <col class="w-[9.3%]" />
+              <col class="w-[9.3%]" />
+              <col class="w-[9.3%]" />
+              <col class="w-[12.1%]" />
+              <col class="w-[9.3%]" />
+              <col class="w-[9.3%]" />
+              <col class="w-[9.3%]" />
+            </colgroup>
+            <thead>
               <tr>
-                <th class="border border-[#d3d3d3] px-2 py-2">Description</th>
-                <th class="border border-[#d3d3d3] px-2 py-2">Account</th>
-                <th class="border border-[#d3d3d3] px-2 py-2 text-right">Rate</th>
-                <th class="border border-[#d3d3d3] px-2 py-2 text-right">Tax Amount</th>
+                <th colspan="2">Quantity</th>
+                <th>Unit</th>
+                <th colspan="3">Product Name</th>
+                <th colspan="2">Unit Price</th>
+                <th colspan="2">Total</th>
               </tr>
             </thead>
             <tbody>
-              @for (tax of savedOrder.taxes; track $index) {
+              @for (item of savedOrder.items || []; track $index) {
                 <tr>
-                  <td class="border border-[#d3d3d3] px-2 py-2">{{ tax.description || tax.charge_type || '—' }}</td>
-                  <td class="border border-[#d3d3d3] px-2 py-2">{{ tax.account_head || '—' }}</td>
-                  <td class="border border-[#d3d3d3] px-2 py-2 text-right">{{ tax.rate ?? '—' }}{{ tax.rate === undefined ? '' : '%' }}</td>
-                  <td class="border border-[#d3d3d3] px-2 py-2 text-right">{{ amount(tax.tax_amount) }}</td>
+                  <td class="text-center" colspan="2">{{ item.qty }}</td>
+                  <td>{{ item.uom || item.stock_uom || '—' }}</td>
+                  <td class="text-center" colspan="3">{{ item.item_name || item.item_code }}</td>
+                  <td colspan="2">{{ amount(item.rate) }}</td>
+                  <td colspan="2">{{ amount(item.qty * item.rate) }}</td>
                 </tr>
               }
             </tbody>
+            <tfoot>
+              <tr class="print-balance-row">
+                <td colspan="4"></td>
+                <th colspan="4">TOTAL BALANCE INCLUDING TAX</th>
+                <td class="print-balance-value" colspan="2">{{ amount(totalBalance()) }}</td>
+              </tr>
+            </tfoot>
           </table>
+        </div>
+      </section>
+
+      @if (savedOrder.taxes?.length) {
+        <section class="mt-4" aria-label="Saved taxes and charges">
+          <h2 class="m-0 border border-b-0 border-[#a6a6a6] bg-[#91cddd] px-2 py-2 text-xs font-bold">TAXES AND CHARGES</h2>
+          <div class="overflow-x-auto">
+            <table class="print-taxes-table w-full min-w-[560px] border-collapse text-left text-xs text-[#222]">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Account</th>
+                  <th>Rate</th>
+                  <th>Tax Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (tax of savedOrder.taxes; track $index) {
+                  <tr>
+                    <td>{{ tax.description || tax.charge_type || '—' }}</td>
+                    <td>{{ tax.account_head || '—' }}</td>
+                    <td>{{ tax.rate ?? '—' }}{{ tax.rate === undefined ? '' : '%' }}</td>
+                    <td>{{ amount(tax.tax_amount) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         </section>
       }
-
-      <section class="ml-auto mt-6 w-full max-w-[340px] text-sm">
-        <div class="flex justify-between border-b border-[#e0e0e0] py-2"><span>Net Total</span><strong>{{ amount(savedOrder.total) }}</strong></div>
-        <div class="flex justify-between border-b border-[#e0e0e0] py-2"><span>Taxes and Charges</span><strong>{{ amount(savedOrder.total_taxes_and_charges) }}</strong></div>
-        <div class="flex justify-between bg-[#dce6f1] px-2 py-3 text-base"><strong>Grand Total</strong><strong>{{ amount(savedOrder.grand_total) }}</strong></div>
-        @if (savedOrder.rounded_total && savedOrder.rounded_total !== savedOrder.grand_total) {
-          <div class="flex justify-between border-b border-[#e0e0e0] py-2"><span>Rounded Total</span><strong>{{ amount(savedOrder.rounded_total) }}</strong></div>
-        }
-        @if (savedOrder.in_words) {
-          <p class="mt-3 text-right text-xs">{{ savedOrder.in_words }}</p>
-        }
-      </section>
     </article>
   }
 </main>

@@ -1,18 +1,222 @@
+.print-party-field {
+  display: grid;
+  grid-template-columns: minmax(104px, 34%) minmax(0, 1fr);
+  min-height: 31px;
+  margin: 0 8px;
+  border: 1px solid #c6c6c6;
+  border-bottom: 0;
+  font-size: 13px;
+}
+
+.print-party-field:last-child {
+  border-bottom: 1px solid #c6c6c6;
+}
+
+.print-party-field > strong {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  border-right: 1px solid #c6c6c6;
+  color: #3e3e3e;
+  font-size: 11px;
+}
+
+.print-party-field > span {
+  min-width: 0;
+  padding: 4px 7px;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.print-party-field.print-address-field {
+  min-height: 55px;
+}
+
+.print-term-cell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.print-term-cell > strong,
+.print-term-cell > span {
+  display: flex;
+  min-height: 29px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #a6a6a6;
+  border-top: 0;
+  border-left: 0;
+  padding: 4px 8px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.print-term-cell > strong {
+  background: #91cddd;
+  font-size: 11px;
+}
+
+.print-term-cell > span {
+  min-height: 31px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.print-items-table th,
+.print-items-table td,
+.print-taxes-table th,
+.print-taxes-table td {
+  border: 1px solid #969696;
+}
+
+.print-items-table th,
+.print-items-table td {
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0;
+}
+
+.print-items-table thead th {
+  height: 36px;
+  background: #c3d69b;
+  text-align: center;
+  font-weight: 700;
+}
+
+.print-items-table tbody td {
+  padding: 5px 7px;
+  overflow-wrap: anywhere;
+}
+
+.print-balance-row td:first-child {
+  border: 0;
+}
+
+.print-balance-row th,
+.print-balance-row .print-balance-value {
+  height: 38px;
+}
+
+.print-balance-row th {
+  background: #c3d69b;
+  padding: 0 10px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.print-balance-row .print-balance-value {
+  background: #dce6f1;
+  padding: 5px 8px;
+}
+
+.print-taxes-table thead th {
+  background: #eaf0e2;
+  text-align: left;
+}
+
+@media (max-width: 700px) {
+  .print-order-header {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-template-rows: 62px 44px;
+  }
+}
+
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  .print-parties {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .print-parties > section {
+    min-width: 0;
+  }
+
   .print-page {
     min-height: 0;
     padding: 0;
     background: white;
   }
 
-  .print-toolbar {
+  .print-toolbar,
+  .print-error {
     display: none;
   }
 
   .print-document {
+    width: 100%;
     max-width: none;
     border: 0;
     padding: 0;
     box-shadow: none;
   }
+
+  .print-record-reference {
+    margin-bottom: 2mm;
+  }
+
+  .print-order-header {
+    margin-bottom: 2mm;
+  }
+
+  .print-parties,
+  .print-order-terms,
+  .print-items-table,
+  .print-taxes-table {
+    break-inside: avoid;
+  }
+
+  .print-document .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  .print-items-table,
+  .print-taxes-table {
+    width: 100%;
+    min-width: 0 !important;
+    table-layout: fixed;
+    font-size: 7pt;
+  }
+
+  .print-items-table th,
+  .print-items-table td,
+  .print-taxes-table th,
+  .print-taxes-table td {
+    box-sizing: border-box;
+    max-width: 0;
+    padding: 1mm;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    line-height: 1.15;
+  }
+
+  .print-items-table th,
+  .print-items-table td {
+    height: 6mm;
+  }
+
+  .print-items-table .print-balance-row th,
+  .print-items-table .print-balance-row .print-balance-value {
+    height: 6mm;
+    padding: 1mm;
+  }
+
+  .print-party-field {
+    min-height: 7mm;
+    font-size: 9pt;
+  }
+
+  .print-party-field > strong {
+    font-size: 8pt;
+  }
+
+  .print-party-field.print-address-field {
+    min-height: 12mm;
+  }
+
 }
