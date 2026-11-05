@@ -1,15 +1,25 @@
 const FRAPPE_BACKEND_URL = process.env.FRAPPE_BACKEND_URL;
 const PROXY_PREFIX = '/api/frappe-proxy';
+const ROUTE_PARAMETER = '__frappe_path';
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
 const FORWARDED_REQUEST_HEADERS = [
   'accept',
   'authorization',
   'content-type',
-  'cookie',
   'origin',
   'referer',
   'x-frappe-csrf-token',
 ];
+const FRAPPE_COOKIE_NAMES = new Set([
+  'csrf_token',
+  'full_name',
+  'preferred_language',
+  'sid',
+  'system_user',
+  'user_id',
+  'user_image',
+  'user_lang',
+]);
 const HOP_BY_HOP_HEADERS = new Set([
   'connection',
   'content-encoding',
@@ -31,6 +41,7 @@ module.exports = async function handler(request, response) {
   }
 
   if (!FRAPPE_BACKEND_URL) {
+    response.setHeader('Cache-Control', 'no-store');
     response.status(500).json({ error: 'Frappe backend URL is not configured.' });
     return;
   }
@@ -39,6 +50,7 @@ module.exports = async function handler(request, response) {
   try {
     backend = new URL(FRAPPE_BACKEND_URL);
   } catch {
+    response.setHeader('Cache-Control', 'no-store');
     response.status(500).json({ error: 'Frappe backend URL is invalid.' });
     return;
   }
@@ -51,6 +63,7 @@ module.exports = async function handler(request, response) {
     || backend.search
     || backend.hash
   ) {
+    response.setHeader('Cache-Control', 'no-store');
     response.status(500).json({ error: 'Frappe backend URL must be an HTTPS origin.' });
     return;
   }
@@ -63,14 +76,22 @@ module.exports = async function handler(request, response) {
     return;
   }
 
-  const frappePath = incoming.pathname.slice(PROXY_PREFIX.length);
+  const frappePath = incoming.searchParams.get(ROUTE_PARAMETER) ?? '';
+  const pathSegments = frappePath.split('/');
   if (
-    !incoming.pathname.startsWith(`${PROXY_PREFIX}/`)
-    || (!frappePath.startsWith('/api/method/') && !frappePath.startsWith('/api/resource/'))
+    !incoming.pathname.startsWith(PROXY_PREFIX)
+    || !frappePath.startsWith('api/')
+    || (!frappePath.startsWith('api/method/') && !frappePath.startsWith('api/resource/'))
+    || pathSegments.some((segment) => segment === '.' || segment === '..')
+    || frappePath.includes('\\')
   ) {
     response.status(404).end();
     return;
   }
+
+  const query = new URLSearchParams(incoming.searchParams);
+  query.delete(ROUTE_PARAMETER);
+  const queryString = query.toString();
 
   const headers = new Headers();
   for (const name of FORWARDED_REQUEST_HEADERS) {
@@ -80,7 +101,17 @@ module.exports = async function handler(request, response) {
     }
   }
 
-  const csrfToken = request.headers.cookie?.match(/(?:^|;\s*)csrf_token=([^;]*)/)?.[1];
+  const frappeCookies = (request.headers.cookie ?? '')
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .filter((cookie) => FRAPPE_COOKIE_NAMES.has(cookie.slice(0, cookie.indexOf('='))));
+  if (frappeCookies.length) {
+    headers.set('cookie', frappeCookies.join('; '));
+  }
+
+  const csrfToken = frappeCookies
+    .find((cookie) => cookie.startsWith('csrf_token='))
+    ?.slice('csrf_token='.length);
   if (csrfToken && !headers.has('x-frappe-csrf-token')) {
     headers.set('x-frappe-csrf-token', csrfToken);
   }
@@ -97,7 +128,7 @@ module.exports = async function handler(request, response) {
 
   try {
     const upstream = await fetch(
-      `${backend.origin}${frappePath}${incoming.search}`,
+      `${backend.origin}/${frappePath}${queryString ? `?${queryString}` : ''}`,
       {
         method: request.method,
         headers,
@@ -128,6 +159,7 @@ module.exports = async function handler(request, response) {
 
     response.end(Buffer.from(await upstream.arrayBuffer()));
   } catch {
+    response.setHeader('Cache-Control', 'no-store');
     response.status(502).json({ error: 'Could not reach the Frappe backend.' });
   }
 };

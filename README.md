@@ -38,7 +38,7 @@ This will compile your project and store the build artifacts in the `dist/` dire
 
 ## Vercel deployment
 
-Production API requests use the same-origin `/api/frappe-proxy` function in `api/frappe-proxy/[...path].js`. Set the `FRAPPE_BACKEND_URL` Vercel environment variable to the HTTPS Frappe origin (for example, `https://dev04.agrovisions.pk`) for both Production and Preview deployments, then redeploy. The function forwards Frappe session cookies without logging them. Local development continues to use `src/proxy.conf.json`.
+Production API requests use the same-origin `/api/frappe-proxy` Vercel Function in `api/frappe-proxy.js`, with the route rewrite in `vercel.json`. Set the `FRAPPE_BACKEND_URL` Vercel environment variable to the HTTPS Frappe origin (for example, `https://dev04.agrovisions.pk`) for both Production and Preview deployments, then redeploy. The function forwards Frappe session cookies without logging them. Local development continues to use `src/proxy.conf.json`.
 
 ## Running unit tests
 
