@@ -1,6 +1,6 @@
 {
   "/api/**": {
-    "target": "http://192.168.90.103",
+    "target": "https://dev04.agrovisions.pk",
     "changeOrigin": true
   }
 }
