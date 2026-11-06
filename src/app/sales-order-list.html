@@ -83,7 +83,7 @@
             <span class="text-center" role="columnheader">Delivery Note</span>
             <span class="text-center" role="columnheader">Sales Invoice</span>
           </div>
-          @for (order of filteredOrders(); track order.name) {
+          @for (order of paginatedOrders(); track order.name) {
             <button
               class="sales-order-list-item grid w-full cursor-pointer grid-cols-[minmax(0,1.25fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.85fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] items-center gap-3 rounded-[14px] border bg-white px-[14px] py-[13px] text-left transition-[border-color,background] duration-[140ms] focus-visible:outline-2 focus-visible:outline-offset-2 max-[760px]:grid-cols-2"
               type="button"
@@ -129,6 +129,30 @@
             </button>
           }
         </div>
+        @if (pageCount() > 1) {
+          <nav class="mt-4 flex flex-wrap items-center justify-between gap-3" aria-label="Sales Order pages">
+            <p class="m-0 text-sm text-[#6d7d77]" aria-live="polite">
+              Showing {{ firstVisibleRecord() }}–{{ lastVisibleRecord() }} of {{ filteredOrders().length }} Sales Orders
+            </p>
+            <div class="flex items-center gap-2">
+              <button
+                class="refresh-button min-h-10 rounded-lg border px-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                [disabled]="currentPage() === 1"
+                (click)="goToPreviousPage()"
+              >Previous</button>
+              <span class="text-sm font-semibold text-[#344a42]" aria-current="page">
+                Page {{ currentPage() }} of {{ pageCount() }}
+              </span>
+              <button
+                class="refresh-button min-h-10 rounded-lg border px-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                [disabled]="currentPage() === pageCount()"
+                (click)="goToNextPage()"
+              >Next</button>
+            </div>
+          </nav>
+        }
       } @else {
         <p class="sales-order-list-notice my-0 rounded-xl border border-dashed px-3 py-[18px] text-center text-base" role="status">
           {{ searchText().trim() ? 'No Sales Orders match your search.' : 'No Sales Orders found.' }}

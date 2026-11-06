@@ -13,6 +13,7 @@ import { FrappeSalesOrderService } from './services/frappe-sales-order.service';
   templateUrl: './sales-order-list.html',
 })
 export class SalesOrderListPage {
+  private readonly pageSize = 20;
   private readonly salesOrders = inject(FrappeSalesOrderService);
   private readonly auth = inject(FrappeAuthService);
   private readonly router = inject(Router);
@@ -21,6 +22,7 @@ export class SalesOrderListPage {
   protected readonly orders = signal<SalesOrderListOption[]>([]);
   protected readonly workflowStateStyles = signal<Record<string, string>>({});
   protected readonly searchText = signal('');
+  protected readonly currentPage = signal(1);
   protected readonly loading = signal(true);
   protected readonly error = signal('');
   protected readonly filteredOrders = computed(() => {
@@ -42,6 +44,19 @@ export class SalesOrderListPage {
       order.total === undefined ? '' : String(order.total),
     ].some((value) => value?.toLocaleLowerCase().includes(query)));
   });
+  protected readonly pageCount = computed(() =>
+    Math.max(1, Math.ceil(this.filteredOrders().length / this.pageSize)),
+  );
+  protected readonly paginatedOrders = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize;
+    return this.filteredOrders().slice(start, start + this.pageSize);
+  });
+  protected readonly firstVisibleRecord = computed(() =>
+    this.filteredOrders().length ? (this.currentPage() - 1) * this.pageSize + 1 : 0,
+  );
+  protected readonly lastVisibleRecord = computed(() =>
+    Math.min(this.currentPage() * this.pageSize, this.filteredOrders().length),
+  );
 
   constructor() {
     this.loadOrders();
@@ -87,6 +102,15 @@ export class SalesOrderListPage {
 
   protected setSearchText(event: Event): void {
     this.searchText.set((event.target as HTMLInputElement).value);
+    this.currentPage.set(1);
+  }
+
+  protected goToPreviousPage(): void {
+    this.currentPage.update((page) => Math.max(1, page - 1));
+  }
+
+  protected goToNextPage(): void {
+    this.currentPage.update((page) => Math.min(this.pageCount(), page + 1));
   }
 
   protected openOrder(name: string): void {
@@ -113,6 +137,7 @@ export class SalesOrderListPage {
     ).subscribe({
       next: ({ orders, workflowStyles }) => {
         this.orders.set(orders);
+        this.currentPage.update((page) => Math.min(page, Math.max(1, Math.ceil(orders.length / this.pageSize))));
         this.workflowStateStyles.set(workflowStyles);
         this.loading.set(false);
       },
