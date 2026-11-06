@@ -71,7 +71,7 @@
       }
 
       @if (loading() && orders().length === 0) {
-        <p class="sales-order-list-notice my-0 rounded-xl border border-dashed px-3 py-[18px] text-center text-base" role="status">Loading Sales Orders from Frappe...</p>
+        <p class="sales-order-list-notice my-0 rounded-xl border border-dashed px-3 py-[18px] text-center text-base" role="status">Loading Sales Orders...</p>
       } @else if (filteredOrders().length > 0) {
         <div class="sales-order-list-table grid gap-2" role="table" aria-label="Sales Order records">
           <div class="sales-order-list-header grid grid-cols-[minmax(0,1.25fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.85fr)_minmax(0,0.9fr)_minmax(0,0.9fr)] items-center gap-3 px-[14px] py-1 text-xs font-bold" role="row">

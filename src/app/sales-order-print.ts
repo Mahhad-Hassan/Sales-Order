@@ -156,6 +156,6 @@ export class SalesOrderPrintPage {
   }
 
   private errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : 'Unexpected Frappe error.';
+    return error instanceof Error ? error.message : 'Unexpected server error.';
   }
 }
