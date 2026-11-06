@@ -34,41 +34,81 @@
 
   <main class="sales-order-content w-full px-4 pb-8 max-[580px]:px-3">
     <section class="opened-record mx-auto -mt-12 w-full max-w-[1440px]">
-      <div class="opened-record-toolbar mb-5 flex items-center justify-between gap-4 rounded-2xl border bg-white p-4 shadow-sm max-[700px]:flex-wrap">
-        <button
-          class="toolbar-back inline-flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[10px] border px-[13px] py-2 text-sm font-semibold"
-          type="button"
-          aria-label="Back to Sales Orders"
-          (click)="backToSalesOrders()"
-        ><span aria-hidden="true">←</span> Back to Sales Orders</button>
-        <div class="flex flex-wrap items-center justify-end gap-2 max-[700px]:w-full max-[700px]:justify-start">
-          <label class="sr-only" for="existing-order">Open existing Sales Order</label>
-          <select
-            id="existing-order"
-            class="toolbar-select min-h-[42px] max-w-full rounded-[10px] border px-3 text-sm"
-            aria-label="Open existing Sales Order"
-            [value]="currentOrderName()"
-            [disabled]="optionsLoading() || orderLoading()"
-            (change)="loadExistingOrder($event)"
+      <div class="opened-record-toolbar mb-5 flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm">
+        <div class="grid w-full grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label="Related document statuses" [attr.aria-busy]="documentStatusesLoading()">
+          <article
+            class="min-w-0 rounded-xl border p-3"
+            [style.background-color]="documentStatusBackground(documentStatuses().salesOrder)"
+            [style.border-color]="documentStatusBorder(documentStatuses().salesOrder)"
           >
-            <option value="" [selected]="!currentOrderName()">Open existing Sales Order...</option>
-            @if (currentOrderName()) {
-              <option [value]="currentOrderName()" selected>
-                {{ currentOrderName() }}
-                @if (currentSalesOrderOption; as order) {
-                  — {{ order.customer }} ({{ order.transaction_date }})
-                }
-              </option>
-            }
-            @for (order of otherSalesOrderOptions; track order.name) {
-              <option [value]="order.name">{{ order.name }} — {{ order.customer }} ({{ order.transaction_date }})</option>
-            }
-          </select>
+            <h2 class="m-0 text-xs font-bold uppercase tracking-wide text-[#53645d]">Sales Order</h2>
+            <p class="mb-0 mt-1 break-words text-sm font-bold"
+              [style.color]="documentStatusColor(documentStatuses().salesOrder)"
+              [attr.aria-live]="documentStatusesLoading() ? 'off' : 'polite'"
+            >{{ documentStatuses().salesOrder }}</p>
+          </article>
+          <article
+            class="min-w-0 rounded-xl border p-3"
+            [style.background-color]="documentStatusBackground(documentStatuses().deliveryNote)"
+            [style.border-color]="documentStatusBorder(documentStatuses().deliveryNote)"
+          >
+            <h2 class="m-0 text-xs font-bold uppercase tracking-wide text-[#53645d]">Delivery Note</h2>
+            <p class="mb-0 mt-1 break-words text-sm font-bold"
+              [style.color]="documentStatusColor(documentStatuses().deliveryNote)"
+              [attr.aria-live]="documentStatusesLoading() ? 'off' : 'polite'"
+            >{{ documentStatuses().deliveryNote }}</p>
+          </article>
+          <article
+            class="min-w-0 rounded-xl border p-3"
+            [style.background-color]="documentStatusBackground(documentStatuses().salesInvoice)"
+            [style.border-color]="documentStatusBorder(documentStatuses().salesInvoice)"
+          >
+            <h2 class="m-0 text-xs font-bold uppercase tracking-wide text-[#53645d]">Sales Invoice</h2>
+            <p class="mb-0 mt-1 break-words text-sm font-bold"
+              [style.color]="documentStatusColor(documentStatuses().salesInvoice)"
+              [attr.aria-live]="documentStatusesLoading() ? 'off' : 'polite'"
+            >{{ documentStatuses().salesInvoice }}</p>
+          </article>
+        </div>
+        @if (documentStatusesError()) {
+          <p class="m-0 text-sm text-[#8b3c2c]" role="alert">{{ documentStatusesError() }}</p>
+        }
+        <div class="flex items-center justify-between gap-4 max-[700px]:flex-wrap">
           <button
-            class="new-order-button min-h-[42px] rounded-[10px] border px-4 text-sm font-bold cursor-pointer"
+            class="toolbar-back inline-flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[10px] border px-[13px] py-2 text-sm font-semibold"
             type="button"
-            (click)="startNewOrder()"
-          >New Order</button>
+            aria-label="Back to Sales Orders"
+            (click)="backToSalesOrders()"
+          ><span aria-hidden="true">←</span> Back to Sales Orders</button>
+          <div class="flex flex-wrap items-center justify-end gap-2 max-[700px]:w-full max-[700px]:justify-start">
+            <label class="sr-only" for="existing-order">Open existing Sales Order</label>
+            <select
+              id="existing-order"
+              class="toolbar-select min-h-[42px] max-w-full rounded-[10px] border px-3 text-sm"
+              aria-label="Open existing Sales Order"
+              [value]="currentOrderName()"
+              [disabled]="optionsLoading() || orderLoading()"
+              (change)="loadExistingOrder($event)"
+            >
+              <option value="" [selected]="!currentOrderName()">Open existing Sales Order...</option>
+              @if (currentOrderName()) {
+                <option [value]="currentOrderName()" selected>
+                  {{ currentOrderName() }}
+                  @if (currentSalesOrderOption; as order) {
+                    — {{ order.customer }} ({{ order.transaction_date }})
+                  }
+              </option>
+              }
+              @for (order of otherSalesOrderOptions; track order.name) {
+                <option [value]="order.name">{{ order.name }} — {{ order.customer }} ({{ order.transaction_date }})</option>
+              }
+            </select>
+            <button
+              class="new-order-button min-h-[42px] rounded-[10px] border px-4 text-sm font-bold cursor-pointer"
+              type="button"
+              (click)="startNewOrder()"
+            >New Order</button>
+          </div>
         </div>
       </div>
 

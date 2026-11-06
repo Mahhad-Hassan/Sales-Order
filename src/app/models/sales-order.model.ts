@@ -29,10 +29,12 @@ export interface SalesOrderItemRecord {
   item_name?: string;
   description?: string;
   qty: number;
+  delivered_qty?: number;
   uom?: string;
   stock_uom?: string;
   warehouse?: string | null;
   rate: number;
+  billed_amt?: number;
   discount_amount?: number;
   amount?: number;
   net_amount?: number;

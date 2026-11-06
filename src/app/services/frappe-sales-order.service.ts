@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { EMPTY, concatMap, expand, forkJoin, from, map, mergeMap, Observable, of, reduce, switchMap } from 'rxjs';
+import { EMPTY, concatMap, expand, forkJoin, from, map, mergeMap, Observable, of, reduce, switchMap, tap } from 'rxjs';
 import {
   CompanyOption,
   IncotermOption,
@@ -20,6 +20,7 @@ import { FrappeApiService } from './frappe-api.service';
 @Injectable({ providedIn: 'root' })
 export class FrappeSalesOrderService {
   private readonly api = inject(FrappeApiService);
+  private salesInvoiceOrderField: 'sales_order' | 'against_sales_order' | null = null;
 
   loadOptions(): Observable<{
     companies: CompanyOption[];
@@ -191,11 +192,13 @@ export class FrappeSalesOrderService {
         'against_sales_order',
         salesOrderNames,
       ),
-      salesInvoices: this.getStatusesForLinkedDocuments(
-        'Sales Invoice Item',
-        'Sales Invoice',
-        'sales_order',
-        salesOrderNames,
+      salesInvoices: this.getSalesInvoiceOrderField().pipe(
+        switchMap((salesOrderField) => this.getStatusesForLinkedDocuments(
+          'Sales Invoice Item',
+          'Sales Invoice',
+          salesOrderField,
+          salesOrderNames,
+        )),
       ),
     }).pipe(
       map(({ deliveryNotes, salesInvoices }) => {
@@ -210,6 +213,27 @@ export class FrappeSalesOrderService {
           };
         }
         return statuses;
+      }),
+    );
+  }
+
+  private getSalesInvoiceOrderField(): Observable<'sales_order' | 'against_sales_order'> {
+    if (this.salesInvoiceOrderField) {
+      return of(this.salesInvoiceOrderField);
+    }
+
+    return this.api.getDocument<FrappeDocTypeMetadata>('DocType', 'Sales Invoice Item').pipe(
+      map((metadata) => {
+        const availableFields = new Set(metadata.fields.map((field) => field.fieldname));
+        const relationshipField = (['sales_order', 'against_sales_order'] as const)
+          .find((field) => availableFields.has(field));
+        if (!relationshipField) {
+          throw new Error('Sales Invoice Item does not expose a Sales Order relationship field.');
+        }
+        return relationshipField;
+      }),
+      tap((field) => {
+        this.salesInvoiceOrderField = field;
       }),
     );
   }
@@ -277,9 +301,11 @@ export class FrappeSalesOrderService {
                 const statusBySalesOrder = new Map<string, Set<string>>();
                 const statusByParent = new Map(documents.map((document) => [
                   document.name,
-                  (workflowStateField ? this.readStringField(document, workflowStateField) : '')
-                    || document.status
-                    || this.documentStatus(document.docstatus),
+                  document.docstatus === 0 || document.docstatus === 2
+                    ? this.documentStatus(document.docstatus)
+                    : (workflowStateField ? this.readStringField(document, workflowStateField) : '')
+                      || document.status
+                      || this.documentStatus(document.docstatus),
                 ]));
                 for (const [parentName, linkedSalesOrders] of salesOrdersByParent) {
                   const status = statusByParent.get(parentName);

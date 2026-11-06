@@ -49,6 +49,7 @@ export class App {
   private readonly customerSearchRequests = new Subject<string>();
   private customerDetailsRequest = 0;
   private orderDetailsRequest = 0;
+  private documentStatusRequest = 0;
   private activeCustomerName = '';
   private orderName = '';
   protected readonly orderDocstatus = signal(0);
@@ -96,6 +97,13 @@ export class App {
   protected readonly savingOrder = signal(false);
   protected readonly orderError = signal('');
   protected readonly orderMessage = signal('');
+  protected readonly documentStatuses = signal({
+    salesOrder: 'Not Created',
+    deliveryNote: 'Not Created',
+    salesInvoice: 'Not Created',
+  });
+  protected readonly documentStatusesLoading = signal(false);
+  protected readonly documentStatusesError = signal('');
   protected readonly paymentTermError = signal('');
   protected readonly itemPriceError = signal('');
   protected readonly itemUomError = signal('');
@@ -227,6 +235,138 @@ export class App {
 
   protected backToSalesOrders(): void {
     void this.router.navigate(['/sales-orders']);
+  }
+
+  protected documentStatusBackground(status: string): string {
+    const tone = this.documentStatusTone(status);
+    return tone === 'green' ? '#e6f3ee'
+      : tone === 'yellow' ? '#fff7db'
+        : tone === 'red' ? '#fce8e6'
+          : '#f3f4f6';
+  }
+
+  protected documentStatusBorder(status: string): string {
+    const tone = this.documentStatusTone(status);
+    return tone === 'green' ? '#b9dccf'
+      : tone === 'yellow' ? '#f2d675'
+        : tone === 'red' ? '#e6aaa3'
+          : '#d1d5db';
+  }
+
+  protected documentStatusColor(status: string): string {
+    const tone = this.documentStatusTone(status);
+    return tone === 'green' ? '#24765f'
+      : tone === 'yellow' ? '#785c00'
+        : tone === 'red' ? '#a34539'
+          : '#5f6b66';
+  }
+
+  private documentStatusTone(status: string): 'green' | 'yellow' | 'red' | 'gray' {
+    const normalized = status.trim().toLocaleLowerCase();
+    if (!normalized || normalized === 'not created' || normalized === 'loading...' || normalized === 'unavailable') {
+      return 'gray';
+    }
+    const values = normalized.split(',').map((value) => value.trim());
+    if (values.every((value) => value.includes('cancel'))) {
+      return 'red';
+    }
+    if (normalized.includes('draft') || normalized.includes('partial')) {
+      return 'yellow';
+    }
+    return 'green';
+  }
+
+  private refreshDocumentStatuses(order: SalesOrderRecord): void {
+    const requestId = ++this.documentStatusRequest;
+    const salesOrderStatus = this.salesOrderDocumentStatus(order);
+    this.documentStatuses.set({
+      salesOrder: salesOrderStatus,
+      deliveryNote: 'Loading...',
+      salesInvoice: 'Loading...',
+    });
+    this.documentStatusesLoading.set(true);
+    this.documentStatusesError.set('');
+    this.salesOrders.getLinkedDocumentStatuses([order.name]).pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: (statuses) => {
+        if (requestId !== this.documentStatusRequest || this.orderName !== order.name) {
+          return;
+        }
+        const linked = statuses[order.name];
+        this.documentStatuses.set({
+          salesOrder: salesOrderStatus,
+          deliveryNote: this.linkedDocumentStatus(linked?.deliveryNoteStatus ?? '—', order, 'delivery'),
+          salesInvoice: this.linkedDocumentStatus(linked?.salesInvoiceStatus ?? '—', order, 'invoice'),
+        });
+        this.documentStatusesLoading.set(false);
+      },
+      error: (error: unknown) => {
+        if (requestId !== this.documentStatusRequest || this.orderName !== order.name) {
+          return;
+        }
+        this.documentStatuses.set({
+          salesOrder: salesOrderStatus,
+          deliveryNote: 'Unavailable',
+          salesInvoice: 'Unavailable',
+        });
+        this.documentStatusesLoading.set(false);
+        this.documentStatusesError.set(`Could not load linked document statuses: ${this.errorMessage(error)}`);
+      },
+    });
+  }
+
+  private salesOrderDocumentStatus(order: SalesOrderRecord): string {
+    if (order.docstatus === 2) {
+      return 'Cancelled';
+    }
+    if (order.docstatus === 0) {
+      return 'Draft';
+    }
+    return order.status?.trim() || 'Submitted';
+  }
+
+  private linkedDocumentStatus(
+    status: string,
+    order: SalesOrderRecord,
+    kind: 'delivery' | 'invoice',
+  ): string {
+    if (status === '—') {
+      return 'Not Created';
+    }
+    return this.orderProgressStatus(order, kind) || status;
+  }
+
+  private orderProgressStatus(order: SalesOrderRecord, kind: 'delivery' | 'invoice'): string {
+    const items = order.items ?? [];
+    if (!items.length) {
+      return '';
+    }
+    const completedField = kind === 'delivery' ? 'delivered_qty' : 'billed_amt';
+    const completedValues = items.map((item) => item[completedField]);
+    if (completedValues.some((value) => typeof value !== 'number' || !Number.isFinite(value))) {
+      return '';
+    }
+    const total = items.reduce((sum, item) => {
+      const itemTotal = kind === 'delivery'
+        ? item.qty
+        : item.net_amount ?? item.amount ?? item.qty * item.rate;
+      return sum + (Number.isFinite(itemTotal) ? itemTotal : 0);
+    }, 0);
+    if (total <= 0) {
+      return '';
+    }
+    const completed = completedValues.reduce<number>(
+      (sum, value) => sum + (typeof value === 'number' ? value : 0),
+      0,
+    );
+    if (completed >= total - 0.000001) {
+      return 'Completed';
+    }
+    if (completed > 0) {
+      return kind === 'delivery' ? 'Partially Delivered' : 'Partially Billed';
+    }
+    return '';
   }
 
   protected startNewOrder(): void {
@@ -438,6 +578,7 @@ export class App {
           : `Sales Order ${saved.name} saved successfully.`);
         this.orderForm.markAsPristine();
         this.updateOrderOption(saved);
+        this.refreshDocumentStatuses(saved);
       },
       error: (error: unknown) => this.orderError.set(this.errorMessage(error)),
     });
@@ -479,6 +620,14 @@ export class App {
     const requestId = ++this.orderDetailsRequest;
     this.orderName = name;
     this.currentOrderName.set(name);
+    this.documentStatusRequest++;
+    this.documentStatuses.set({
+      salesOrder: 'Loading...',
+      deliveryNote: 'Loading...',
+      salesInvoice: 'Loading...',
+    });
+    this.documentStatusesLoading.set(true);
+    this.documentStatusesError.set('');
     this.isExistingOrder.set(true);
     this.canUpdateOrder.set(false);
     this.orderForm.disable({ emitEvent: false });
@@ -501,6 +650,7 @@ export class App {
         this.orderName = order.name;
         this.currentOrderName.set(order.name);
         this.orderDocstatus.set(order.docstatus);
+        this.refreshDocumentStatuses(order);
         this.loadedPaymentSchedule = order.payment_schedule ?? [];
         this.loadedPaymentTermName = this.loadedPaymentSchedule[0]?.payment_term ?? '';
         this.loadedSalesOrderSnapshot = order;
@@ -592,6 +742,13 @@ export class App {
       },
       error: (error: unknown) => {
         if (requestId === this.orderDetailsRequest) {
+          this.documentStatuses.set({
+            salesOrder: 'Unavailable',
+            deliveryNote: 'Unavailable',
+            salesInvoice: 'Unavailable',
+          });
+          this.documentStatusesLoading.set(false);
+          this.documentStatusesError.set(`Could not load document statuses: ${this.errorMessage(error)}`);
           this.orderError.set(`Could not load Sales Order ${name}: ${this.errorMessage(error)}`);
         }
       },
@@ -600,6 +757,14 @@ export class App {
 
   private resetForNewOrder(): void {
     this.orderDetailsRequest++;
+    this.documentStatusRequest++;
+    this.documentStatuses.set({
+      salesOrder: 'Not Created',
+      deliveryNote: 'Not Created',
+      salesInvoice: 'Not Created',
+    });
+    this.documentStatusesLoading.set(false);
+    this.documentStatusesError.set('');
     this.orderLoading.set(false);
     this.orderName = '';
     this.currentOrderName.set('');
