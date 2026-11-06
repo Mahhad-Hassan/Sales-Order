@@ -17,6 +17,15 @@ export interface CompanyOption {
   default_warehouse?: string | null;
 }
 
+export interface AssignmentUserOption {
+  name: string;
+  full_name?: string;
+}
+
+export interface AssignmentUserGroupOption {
+  name: string;
+}
+
 export interface SellingPriceListOption {
   name: string;
   currency: string;

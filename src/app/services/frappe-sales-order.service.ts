@@ -2,6 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { EMPTY, concatMap, expand, forkJoin, from, map, mergeMap, Observable, of, reduce, switchMap, tap } from 'rxjs';
 import {
   CompanyOption,
+  AssignmentUserGroupOption,
+  AssignmentUserOption,
   IncotermOption,
   ItemPriceOption,
   LinkedDocumentItem,
@@ -69,6 +71,51 @@ export class FrappeSalesOrderService {
 
   getSalesOrder(name: string): Observable<SalesOrderRecord> {
     return this.api.getDocument<SalesOrderRecord>('Sales Order', name);
+  }
+
+  getAssignmentOptions(): Observable<{
+    users: AssignmentUserOption[];
+    userGroups: AssignmentUserGroupOption[];
+  }> {
+    return forkJoin({
+      users: this.api.getList<AssignmentUserOption>(
+        'User',
+        ['name', 'full_name'],
+        [['enabled', '=', 1], ['user_type', '=', 'System User']],
+        500,
+      ),
+      userGroups: this.api.getList<AssignmentUserGroupOption>('User Group', ['name'], [], 500),
+    });
+  }
+
+  getUserGroupMembers(groupName: string): Observable<string[]> {
+    return this.api.getDocument<{
+      user_group_members?: Array<{ user?: string | null }>;
+    }>('User Group', groupName).pipe(
+      map((group) => [...new Set((group.user_group_members ?? [])
+        .map((member) => member.user?.trim())
+        .filter((user): user is string => Boolean(user)))]),
+    );
+  }
+
+  assignSalesOrder(
+    name: string,
+    assignment: {
+      assignTo: string[];
+      date: string;
+      priority: 'Low' | 'Medium' | 'High';
+      description: string;
+    },
+  ): Observable<unknown> {
+    return this.api.callMethod<unknown>('frappe.desk.form.assign_to.add', {
+      doctype: 'Sales Order',
+      name,
+      assign_to: JSON.stringify(assignment.assignTo),
+      date: assignment.date || null,
+      priority: assignment.priority,
+      description: assignment.description,
+      notify: true,
+    });
   }
 
   getItemUoms(itemCode: string): Observable<string[]> {

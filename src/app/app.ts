@@ -6,6 +6,8 @@ import { Subject, catchError, debounceTime, finalize, forkJoin, of, switchMap, t
 import { CustomerAddressOption, CustomerOption, EMPTY_CUSTOMER_PARTY } from './models/customer-option.model';
 import { calculatePaymentDueDate, formatDateForInput } from './models/payment-term-date';
 import {
+  AssignmentUserGroupOption,
+  AssignmentUserOption,
   CompanyOption,
   IncotermOption,
   ItemPriceOption,
@@ -50,6 +52,8 @@ export class App {
   private customerDetailsRequest = 0;
   private orderDetailsRequest = 0;
   private documentStatusRequest = 0;
+  private assignmentOptionsRequest = 0;
+  private assignmentGroupRequest = 0;
   private activeCustomerName = '';
   private orderName = '';
   protected readonly orderDocstatus = signal(0);
@@ -108,6 +112,20 @@ export class App {
   protected readonly deliveryDateDisplay = signal('');
   protected readonly dueDateDisplay = signal('');
   protected readonly dateInputError = signal('');
+  protected readonly assignmentDialogOpen = signal(false);
+  protected readonly assignmentUsers = signal<AssignmentUserOption[]>([]);
+  protected readonly assignmentUserGroups = signal<AssignmentUserGroupOption[]>([]);
+  protected readonly assignmentUsersLoading = signal(false);
+  protected readonly assignmentGroupLoading = signal(false);
+  protected readonly assignmentSaving = signal(false);
+  protected readonly assignmentError = signal('');
+  protected readonly assignedUserNames = signal<string[]>([]);
+  protected readonly assignmentGroupUserNames = signal<string[]>([]);
+  protected readonly assignToMe = signal(false);
+  protected readonly assignmentUserGroup = signal('');
+  protected readonly assignmentDate = signal('');
+  protected readonly assignmentPriority = signal<'Low' | 'Medium' | 'High'>('Medium');
+  protected readonly assignmentComment = signal('');
   protected readonly paymentTermError = signal('');
   protected readonly itemPriceError = signal('');
   protected readonly itemUomError = signal('');
@@ -304,6 +322,164 @@ export class App {
 
   protected backToSalesOrders(): void {
     void this.router.navigate(['/sales-orders']);
+  }
+
+  protected openAssignmentDialog(): void {
+    if (!this.isExistingOrder() || !this.orderName) {
+      return;
+    }
+    this.assignmentDialogOpen.set(true);
+    const requestId = ++this.assignmentOptionsRequest;
+    this.assignmentUsersLoading.set(true);
+    this.assignmentGroupLoading.set(false);
+    this.assignmentGroupRequest++;
+    this.assignmentError.set('');
+    this.assignedUserNames.set([]);
+    this.assignmentGroupUserNames.set([]);
+    this.assignToMe.set(false);
+    this.assignmentUserGroup.set('');
+    this.assignmentDate.set('');
+    this.assignmentPriority.set('Medium');
+    this.assignmentComment.set('');
+    this.salesOrders.getAssignmentOptions().pipe(
+      finalize(() => {
+        if (requestId === this.assignmentOptionsRequest) {
+          this.assignmentUsersLoading.set(false);
+        }
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: (options) => {
+        if (requestId !== this.assignmentOptionsRequest || !this.assignmentDialogOpen()) {
+          return;
+        }
+        this.assignmentUsers.set(options.users);
+        this.assignmentUserGroups.set(options.userGroups);
+      },
+      error: (error: unknown) => {
+        if (requestId === this.assignmentOptionsRequest && this.assignmentDialogOpen()) {
+          this.assignmentError.set(`Could not load assignment options: ${this.errorMessage(error)}`);
+        }
+      },
+    });
+  }
+
+  protected closeAssignmentDialog(): void {
+    if (!this.assignmentSaving()) {
+      this.assignmentOptionsRequest++;
+      this.assignmentGroupRequest++;
+      this.assignmentGroupLoading.set(false);
+      this.assignmentDialogOpen.set(false);
+      this.assignmentError.set('');
+    }
+  }
+
+  protected updateAssignedUser(event: Event, userName: string): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.assignedUserNames.update((users) => checked
+      ? [...new Set([...users, userName])]
+      : users.filter((user) => user !== userName));
+    if (userName === this.currentUser) {
+      this.assignToMe.set(checked);
+    }
+  }
+
+  protected updateAssignToMe(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.assignToMe.set(checked);
+    this.assignedUserNames.update((users) => checked
+      ? [...new Set([...users, this.currentUser])]
+      : users.filter((user) => user !== this.currentUser));
+  }
+
+  protected updateAssignmentUserGroup(event: Event): void {
+    const groupName = (event.target as HTMLSelectElement).value;
+    this.assignmentUserGroup.set(groupName);
+    const previousMembers = this.assignmentGroupUserNames();
+    this.assignmentGroupUserNames.set([]);
+    this.assignedUserNames.update((users) => users.filter((user) => !previousMembers.includes(user)));
+    const requestId = ++this.assignmentGroupRequest;
+    if (!groupName) {
+      this.assignmentGroupLoading.set(false);
+      return;
+    }
+
+    this.assignmentGroupLoading.set(true);
+    this.assignmentError.set('');
+    this.salesOrders.getUserGroupMembers(groupName).pipe(
+      finalize(() => {
+        if (requestId === this.assignmentGroupRequest) {
+          this.assignmentGroupLoading.set(false);
+        }
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: (members) => {
+        if (requestId !== this.assignmentGroupRequest || !this.assignmentDialogOpen()) {
+          return;
+        }
+        const availableUsers = new Set(this.assignmentUsers().map((user) => user.name));
+        const groupUsers = members.filter((user) => availableUsers.has(user));
+        this.assignmentGroupUserNames.set(groupUsers);
+        this.assignedUserNames.update((users) => [...new Set([...users, ...groupUsers])]);
+        if (groupUsers.includes(this.currentUser)) {
+          this.assignToMe.set(true);
+        }
+        if (!groupUsers.length) {
+          this.assignmentError.set(`User group "${groupName}" has no active system users.`);
+        }
+      },
+      error: (error: unknown) => {
+        if (requestId === this.assignmentGroupRequest) {
+          this.assignmentError.set(`Could not load users in the selected group: ${this.errorMessage(error)}`);
+        }
+      },
+    });
+  }
+
+  protected updateAssignmentDate(event: Event): void {
+    this.assignmentDate.set((event.target as HTMLInputElement).value);
+  }
+
+  protected updateAssignmentPriority(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    if (value === 'Low' || value === 'Medium' || value === 'High') {
+      this.assignmentPriority.set(value);
+    }
+  }
+
+  protected updateAssignmentComment(event: Event): void {
+    this.assignmentComment.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  protected submitAssignment(): void {
+    if (!this.orderName || !this.isExistingOrder() || this.assignmentSaving()) {
+      return;
+    }
+    if (!this.assignedUserNames().length) {
+      this.assignmentError.set('Select at least one user in Assign To.');
+      return;
+    }
+
+    this.assignmentSaving.set(true);
+    this.assignmentError.set('');
+    this.salesOrders.assignSalesOrder(this.orderName, {
+      assignTo: this.assignedUserNames(),
+      date: this.assignmentDate(),
+      priority: this.assignmentPriority(),
+      description: this.assignmentComment().trim(),
+    }).pipe(
+      finalize(() => this.assignmentSaving.set(false)),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: () => {
+        this.assignmentDialogOpen.set(false);
+        this.orderMessage.set(`Sales Order ${this.orderName} assigned successfully.`);
+      },
+      error: (error: unknown) => {
+        this.assignmentError.set(`Could not assign Sales Order: ${this.errorMessage(error)}`);
+      },
+    });
   }
 
   protected documentStatusBackground(status: string): string {
