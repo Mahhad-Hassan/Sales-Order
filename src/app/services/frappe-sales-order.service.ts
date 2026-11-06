@@ -70,6 +70,18 @@ export class FrappeSalesOrderService {
     return this.api.getDocument<SalesOrderRecord>('Sales Order', name);
   }
 
+  getItemUoms(itemCode: string): Observable<string[]> {
+    return this.api.getDocument<{
+      stock_uom?: string;
+      uoms?: Array<{ uom?: string | null }>;
+    }>('Item', itemCode).pipe(
+      map((item) => [...new Set([
+        item.stock_uom,
+        ...(item.uoms ?? []).map((row) => row.uom),
+      ].filter((uom): uom is string => typeof uom === 'string' && Boolean(uom.trim())))]),
+    );
+  }
+
   getAllSalesOrders(): Observable<SalesOrderListOption[]> {
     return this.getActiveWorkflowStateField('Sales Order').pipe(
       switchMap((workflowStateField) => {

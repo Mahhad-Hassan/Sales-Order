@@ -403,7 +403,20 @@
               <tr [formGroupName]="rowIndex">
                 <td class="text-center" colspan="3"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Product Name" type="text" list="sales-order-items" formControlName="productName" /></td>
                 <td class="text-center" colspan="2"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Quantity" type="number" min="0" step="any" formControlName="quantity" /></td>
-                <td><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Unit" type="text" formControlName="unit" /></td>
+                <td>
+                  <select
+                    class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]"
+                    aria-label="Unit"
+                    formControlName="unit"
+                    [disabled]="orderForm.disabled || !itemUomOptions(row).length"
+                    (change)="handleUnitSelection(row)"
+                  >
+                    <option value="">Select unit...</option>
+                    @for (uom of itemUomOptions(row); track uom) {
+                      <option [value]="uom">{{ uom }}</option>
+                    }
+                  </select>
+                </td>
                 <td colspan="2"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Unit Price" type="number" min="0" step="any" formControlName="unitPrice" /></td>
                 <td colspan="2">
                   <div class="flex h-[38px] items-stretch">
@@ -431,6 +444,9 @@
     </section>
     @if (itemPriceError()) {
       <p class="mt-2 mb-0 text-xs text-[#8b3c2c]" role="alert">{{ itemPriceError() }}</p>
+    }
+    @if (itemUomError()) {
+      <p class="mt-2 mb-0 text-xs text-[#8b3c2c]" role="alert">{{ itemUomError() }}</p>
     }
     @if (orderTaxes().length) {
       <section class="form-card taxes-section" aria-label="Saved taxes and charges">

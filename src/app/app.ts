@@ -57,6 +57,8 @@ export class App {
   private loadedPaymentSchedule: NonNullable<SalesOrderRecord['payment_schedule']> = [];
   private loadedPaymentTermName = '';
   private readonly itemPriceRequestIds = new WeakMap<FormGroup, number>();
+  private readonly itemUomRequestIds = new WeakMap<FormGroup, number>();
+  private readonly itemUomsByRow = new WeakMap<FormGroup, string[]>();
   private readonly manualPriceEditIds = new WeakMap<FormGroup, number>();
   private readonly autoUnitPrices = new WeakMap<FormGroup, number>();
   private loadedSalesOrderSnapshot: SalesOrderRecord | null = null;
@@ -96,6 +98,7 @@ export class App {
   protected readonly orderMessage = signal('');
   protected readonly paymentTermError = signal('');
   protected readonly itemPriceError = signal('');
+  protected readonly itemUomError = signal('');
   protected readonly isExistingOrder = signal(false);
   protected readonly canUpdateOrder = signal(true);
   protected readonly itemRows = this.formBuilder.array<FormGroup>([this.createRow()]);
@@ -675,11 +678,14 @@ export class App {
   private handleProductSelection(row: FormGroup, productName: string): void {
     const requestId = (this.itemPriceRequestIds.get(row) ?? 0) + 1;
     this.itemPriceRequestIds.set(row, requestId);
+    this.itemUomRequestIds.set(row, (this.itemUomRequestIds.get(row) ?? 0) + 1);
     this.manualPriceEditIds.set(row, (this.manualPriceEditIds.get(row) ?? 0) + 1);
     this.autoUnitPrices.delete(row);
     row.controls['unitPrice'].setValue('', { emitEvent: false });
     row.controls['unit'].setValue('', { emitEvent: false });
+    this.itemUomsByRow.set(row, []);
     this.itemPriceError.set('');
+    this.itemUomError.set('');
     this.updateItemTotals();
     if (this.orderLoading()) {
       return;
@@ -695,7 +701,56 @@ export class App {
     }
 
     row.controls['unit'].setValue(item.stock_uom ?? '', { emitEvent: false });
+    this.itemUomsByRow.set(row, item.stock_uom ? [item.stock_uom] : []);
+    this.loadItemUomOptions(row, item, item.stock_uom ?? '');
     this.requestItemPrice(row, item, true, requestId);
+  }
+
+  protected itemUomOptions(row: FormGroup): string[] {
+    return this.itemUomsByRow.get(row) ?? [];
+  }
+
+  protected handleUnitSelection(row: FormGroup): void {
+    if (this.orderLoading()) {
+      return;
+    }
+
+    const productName = String(row.controls['productName'].value ?? '').trim().toLocaleLowerCase();
+    const item = this.orderItems().find((option) =>
+      option.item_code.toLocaleLowerCase() === productName
+      || option.item_name.toLocaleLowerCase() === productName,
+    );
+    if (!item) {
+      return;
+    }
+
+    const requestId = (this.itemPriceRequestIds.get(row) ?? 0) + 1;
+    this.itemPriceRequestIds.set(row, requestId);
+    this.requestItemPrice(row, item, false, requestId);
+  }
+
+  private loadItemUomOptions(row: FormGroup, item: SalesOrderItemOption, selectedUom: string): void {
+    const requestId = (this.itemUomRequestIds.get(row) ?? 0) + 1;
+    this.itemUomRequestIds.set(row, requestId);
+    this.itemUomError.set('');
+    this.salesOrders.getItemUoms(item.item_code).pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: (uoms) => {
+        const productName = String(row.controls['productName'].value ?? '').trim().toLocaleLowerCase();
+        const matchesItem = productName === item.item_code.toLocaleLowerCase()
+          || productName === item.item_name.toLocaleLowerCase();
+        if (this.itemUomRequestIds.get(row) !== requestId || !matchesItem) {
+          return;
+        }
+        this.itemUomsByRow.set(row, [...new Set([...uoms, selectedUom].filter(Boolean))]);
+      },
+      error: (error: unknown) => {
+        if (this.itemUomRequestIds.get(row) === requestId) {
+          this.itemUomError.set(`Could not load units for ${item.item_code}: ${this.errorMessage(error)}`);
+        }
+      },
+    });
   }
 
   private refreshItemPrices(): void {
@@ -870,8 +925,21 @@ export class App {
     }
     for (const row of this.itemRows.controls) {
       this.itemPriceRequestIds.set(row, (this.itemPriceRequestIds.get(row) ?? 0) + 1);
+      this.itemUomRequestIds.set(row, (this.itemUomRequestIds.get(row) ?? 0) + 1);
       this.manualPriceEditIds.set(row, (this.manualPriceEditIds.get(row) ?? 0) + 1);
       this.autoUnitPrices.delete(row);
+      const productName = String(row.controls['productName'].value ?? '').trim().toLocaleLowerCase();
+      const item = this.orderItems().find((option) =>
+        option.item_code.toLocaleLowerCase() === productName
+        || option.item_name.toLocaleLowerCase() === productName,
+      );
+      const selectedUom = String(row.controls['unit'].value ?? '').trim();
+      if (item) {
+        this.itemUomsByRow.set(row, [...new Set([item.stock_uom, selectedUom].filter(Boolean))]);
+        this.loadItemUomOptions(row, item, selectedUom);
+      } else {
+        this.itemUomsByRow.set(row, []);
+      }
     }
   }
 
