@@ -240,6 +240,7 @@
                     role="option"
                     [attr.data-address-id]="address.docName"
                     [attr.aria-selected]="selectedBillingAddress() === address.docName"
+                    [title]="address.details.postalAddress || address.label"
                     (click)="selectBillingAddress(address.docName)"
                   >{{ address.details.postalAddress || address.label }}</button>
                 } @empty {
@@ -331,6 +332,7 @@
                     role="option"
                     [attr.data-address-id]="address.docName"
                     [attr.aria-selected]="selectedShippingAddress() === address.docName"
+                    [title]="address.details.postalAddress || address.label"
                     (click)="selectShippingAddress(address.docName)"
                   >{{ address.details.postalAddress || address.label }}</button>
                 } @empty {
