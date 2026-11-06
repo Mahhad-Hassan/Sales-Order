@@ -226,7 +226,7 @@ export class FrappeSalesOrderService {
           .map((workflow) => workflow.workflow_state_field?.trim())
           .filter((field): field is string => Boolean(field)))];
         if (fields.length > 1) {
-          throw new Error(`Multiple active ${doctype} workflows use different state fields. Please check the Frappe workflow configuration.`);
+          throw new Error(`Multiple active ${doctype} workflows use different state fields. Please check the workflow configuration.`);
         }
         return fields[0] ?? null;
       }),

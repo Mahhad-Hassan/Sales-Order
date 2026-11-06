@@ -126,8 +126,8 @@ export class FrappeApiService {
 
     if (!isHttps && !isDevelopmentHttp && !isProductionProxy) {
       throw new Error(environment.production
-        ? 'Configure a reachable HTTPS Frappe URL before connecting.'
-        : 'Configure an HTTP or HTTPS Frappe URL before connecting.');
+        ? 'Configure a reachable HTTPS server URL before connecting.'
+        : 'Configure an HTTP or HTTPS server URL before connecting.');
     }
 
     return baseUrl;
@@ -141,35 +141,35 @@ export class FrappeApiService {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 0) {
         return new Error(
-          'The browser did not receive a response from Frappe. Check network and TLS connectivity, and inspect the browser console for CORS or preflight errors. Angular cannot distinguish these browser-level failures by status alone.',
+          'The browser did not receive a response from the server. Check network and TLS connectivity, and inspect the browser console for CORS or preflight errors. Angular cannot distinguish these browser-level failures by status alone.',
         );
       }
 
       const isLoginRequest = error.url?.split('?')[0].endsWith('/api/method/login') ?? false;
       if (isLoginRequest && (error.status === 400 || error.status === 401)) {
-        return new Error('Frappe rejected the login. Check the username and password, or verify the account is allowed to sign in.');
+        return new Error('The server rejected the login. Check the username and password, or verify the account is allowed to sign in.');
       }
       if (isLoginRequest && error.status === 429) {
-        return new Error('Frappe is temporarily rate-limiting login attempts. Wait a moment and try again.');
+        return new Error('Login attempts are temporarily rate-limited. Wait a moment and try again.');
       }
       if (error.status === 403 && error.headers.get('cf-mitigated') === 'challenge') {
         return new Error(
-          'Cloudflare blocked the Frappe API request with a security challenge. The Frappe/Cloudflare administrator must allow the Pages Function proxy for the required API routes; this challenge cannot be completed by the login API client.',
+          'The API request was blocked by a security challenge. Contact your system administrator to allow this application to access the required routes.',
         );
       }
       if (error.status === 401) {
-        return new Error('Frappe sign-in is required or the session has expired.');
+        return new Error('Sign-in is required or the session has expired.');
       }
       if (error.status === 403) {
-        return new Error('Your Frappe account does not have permission for this action.');
+        return new Error('Your account does not have permission for this action.');
       }
       if (error.status >= 500) {
-        return new Error(`Frappe server error (HTTP ${error.status}). Please try again later or contact your Frappe administrator.`);
+        return new Error(`Server error (HTTP ${error.status}). Please try again later or contact your system administrator.`);
       }
 
-      return new Error(`Frappe request failed (HTTP ${error.status}).`);
+      return new Error(`Request failed (HTTP ${error.status}).`);
     }
 
-    return error instanceof Error ? error : new Error('Unexpected Frappe request error.');
+    return error instanceof Error ? error : new Error('Unexpected server request error.');
   }
 }
