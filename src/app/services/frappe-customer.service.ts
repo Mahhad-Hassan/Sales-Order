@@ -310,7 +310,11 @@ export class FrappeCustomerService {
     customerName: string,
     taxId: string,
   ): CustomerPartyDetails {
+    const title = this.readValue(address, this.fieldByLabel(metadata, ['Address Title']));
+    const addressType = this.readValue(address, this.fieldByLabel(metadata, ['Address Type']));
     const addressLines = [
+      title,
+      addressType ? `(${addressType})` : '',
       this.readValue(address, this.fieldByLabel(metadata, ['Address Line 1', 'Address Line1'])),
       this.readValue(address, this.fieldByLabel(metadata, ['Address Line 2', 'Address Line2'])),
       this.readValue(address, this.fieldByLabel(metadata, ['City', 'City/Town'])),
@@ -320,9 +324,9 @@ export class FrappeCustomerService {
     ].filter(Boolean);
 
     return {
-      name: this.readValue(address, this.fieldByLabel(metadata, ['Address Title'])),
+      name: title,
       companyName: customerName,
-      postalAddress: addressLines.join(', '),
+      postalAddress: addressLines.join('\n'),
       phoneNo: this.readValue(address, this.fieldByLabel(metadata, ['Phone', 'Phone No', 'Phone Number'])),
       faxNo: this.readValue(address, this.fieldByLabel(metadata, ['Fax', 'Fax No'])),
       email: this.readValue(address, this.fieldByLabel(metadata, ['Email', 'Email Id', 'Email Address'])),
@@ -330,17 +334,24 @@ export class FrappeCustomerService {
     };
   }
 
-  private addressLabel(
-    address: FrappeDocument,
-    metadata: FrappeDocTypeMetadata,
-    docName: string,
-    details: CustomerPartyDetails,
-  ): string {
-    const title = this.readValue(address, this.fieldByLabel(metadata, ['Address Title'])) || docName;
-    const type = this.readValue(address, this.fieldByLabel(metadata, ['Address Type']));
-    const addressTitle = type ? `${title} (${type})` : title;
-    return details.postalAddress ? `${addressTitle} - ${details.postalAddress}` : addressTitle;
-  }
+private addressLabel(
+  address: FrappeDocument,
+  metadata: FrappeDocTypeMetadata,
+  docName: string,
+  details: CustomerPartyDetails,
+): string {
+  const title =
+    this.readValue(address, this.fieldByLabel(metadata, ['Address Title'])) || docName;
+
+  const type = this.readValue(
+    address,
+    this.fieldByLabel(metadata, ['Address Type']),
+  );
+
+  // Return the complete multiline address.
+  // Fallback to title and address type if postalAddress is empty.
+  return details.postalAddress || (type ? `${title}\n(${type})` : title);
+}
 
   private prioritizeAddress(
     options: CustomerAddressOption[],

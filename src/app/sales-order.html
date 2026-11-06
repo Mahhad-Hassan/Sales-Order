@@ -166,22 +166,40 @@
           <input id="bill-company" type="text" formControlName="companyName" />
         </div>
         <div class="party-field address-field">
-          <label for="bill-address">POSTAL ADDRESS</label>
-          @if (billingAddressOptions().length > 1) {
-            <select
-              id="bill-address"
-              aria-label="POSTAL ADDRESS"
+          <label for="bill-address-trigger">POSTAL ADDRESS</label>
+          <div class="address-dropdown">
+            <button
+              id="bill-address-trigger"
+              class="address-dropdown-trigger"
+              type="button"
+              aria-haspopup="listbox"
+              aria-controls="bill-address-options"
+              aria-label="Choose billing postal address"
               [disabled]="orderForm.disabled"
-              [value]="selectedBillingAddress()"
-              (change)="selectBillingAddress($event)"
+              [attr.aria-expanded]="billingAddressDropdownOpen()"
+              (click)="toggleAddressDropdown('billTo')"
+              (keydown)="handleAddressTriggerKeydown('billTo', $event)"
             >
-              @for (address of billingAddressOptions(); track address.docName) {
-                <option [value]="address.docName">{{ address.label }}</option>
-              }
-            </select>
-          } @else {
-            <textarea id="bill-address" rows="2" formControlName="postalAddress"></textarea>
-          }
+              <span class="address-dropdown-value">{{ orderForm.controls.billTo.controls.postalAddress.value || 'Select billing address...' }}</span>
+              <span class="address-dropdown-arrow" aria-hidden="true"></span>
+            </button>
+            @if (billingAddressDropdownOpen()) {
+              <div id="bill-address-options" class="address-dropdown-menu" role="listbox" aria-label="Billing address options" (keydown)="handleAddressOptionKeydown('billTo', $event)">
+                @for (address of billingAddressOptions(); track address.docName) {
+                  <button
+                    class="address-dropdown-option"
+                    type="button"
+                    role="option"
+                    [attr.data-address-id]="address.docName"
+                    [attr.aria-selected]="selectedBillingAddress() === address.docName"
+                    (click)="selectBillingAddress(address.docName)"
+                  >{{ address.details.postalAddress || address.label }}</button>
+                } @empty {
+                  <p class="address-dropdown-empty" role="status">No billing addresses available.</p>
+                }
+              </div>
+            }
+          </div>
         </div>
         <div class="party-field">
           <label for="bill-phone">PHONE NO</label>
@@ -239,22 +257,40 @@
           <input id="ship-company" type="text" formControlName="companyName" />
         </div>
         <div class="party-field address-field">
-          <label for="ship-address">POSTAL ADDRESS</label>
-          @if (shippingAddressOptions().length > 1) {
-            <select
-              id="ship-address"
-              aria-label="POSTAL ADDRESS"
+          <label for="ship-address-trigger">POSTAL ADDRESS</label>
+          <div class="address-dropdown">
+            <button
+              id="ship-address-trigger"
+              class="address-dropdown-trigger"
+              type="button"
+              aria-haspopup="listbox"
+              aria-controls="ship-address-options"
+              aria-label="Choose shipping postal address"
               [disabled]="orderForm.disabled"
-              [value]="selectedShippingAddress()"
-              (change)="selectShippingAddress($event)"
+              [attr.aria-expanded]="shippingAddressDropdownOpen()"
+              (click)="toggleAddressDropdown('shipTo')"
+              (keydown)="handleAddressTriggerKeydown('shipTo', $event)"
             >
-              @for (address of shippingAddressOptions(); track address.docName) {
-                <option [value]="address.docName">{{ address.label }}</option>
-              }
-            </select>
-          } @else {
-            <textarea id="ship-address" rows="2" formControlName="postalAddress"></textarea>
-          }
+              <span class="address-dropdown-value">{{ orderForm.controls.shipTo.controls.postalAddress.value || 'Select shipping address...' }}</span>
+              <span class="address-dropdown-arrow" aria-hidden="true"></span>
+            </button>
+            @if (shippingAddressDropdownOpen()) {
+              <div id="ship-address-options" class="address-dropdown-menu" role="listbox" aria-label="Shipping address options" (keydown)="handleAddressOptionKeydown('shipTo', $event)">
+                @for (address of shippingAddressOptions(); track address.docName) {
+                  <button
+                    class="address-dropdown-option"
+                    type="button"
+                    role="option"
+                    [attr.data-address-id]="address.docName"
+                    [attr.aria-selected]="selectedShippingAddress() === address.docName"
+                    (click)="selectShippingAddress(address.docName)"
+                  >{{ address.details.postalAddress || address.label }}</button>
+                } @empty {
+                  <p class="address-dropdown-empty" role="status">No shipping addresses available.</p>
+                }
+              </div>
+            }
+          </div>
         </div>
         <div class="party-field">
           <label for="ship-phone">PHONE NO</label>

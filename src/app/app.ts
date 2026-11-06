@@ -77,6 +77,8 @@ export class App {
   protected readonly shippingAddressOptions = signal<CustomerAddressOption[]>([]);
   protected readonly selectedBillingAddress = signal('');
   protected readonly selectedShippingAddress = signal('');
+  protected readonly billingAddressDropdownOpen = signal(false);
+  protected readonly shippingAddressDropdownOpen = signal(false);
   protected readonly customerEmails = signal<string[]>([]);
   protected readonly billingEmailDropdownOpen = signal(false);
   protected readonly shippingEmailDropdownOpen = signal(false);
@@ -631,6 +633,8 @@ export class App {
     this.shippingAddressOptions.set([]);
     this.selectedBillingAddress.set('');
     this.selectedShippingAddress.set('');
+    this.billingAddressDropdownOpen.set(false);
+    this.shippingAddressDropdownOpen.set(false);
     this.customerEmails.set([]);
     this.billingEmailDropdownOpen.set(false);
     this.shippingEmailDropdownOpen.set(false);
@@ -1007,6 +1011,8 @@ export class App {
       this.shippingAddressOptions.set([]);
       this.selectedBillingAddress.set('');
       this.selectedShippingAddress.set('');
+      this.billingAddressDropdownOpen.set(false);
+      this.shippingAddressDropdownOpen.set(false);
       this.customerEmails.set([]);
       this.billingEmailDropdownOpen.set(false);
       this.shippingEmailDropdownOpen.set(false);
@@ -1089,26 +1095,111 @@ export class App {
       });
   }
 
-  protected selectBillingAddress(event: Event): void {
-    const docName = (event.target as HTMLSelectElement).value;
+  protected toggleAddressDropdown(party: 'billTo' | 'shipTo'): void {
+    const dropdown = party === 'billTo'
+      ? this.billingAddressDropdownOpen
+      : this.shippingAddressDropdownOpen;
+    dropdown.update((open) => !open);
+  }
+
+  protected handleAddressTriggerKeydown(party: 'billTo' | 'shipTo', event: KeyboardEvent): void {
+    if (event.key !== 'ArrowDown' && event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    const dropdown = party === 'billTo'
+      ? this.billingAddressDropdownOpen
+      : this.shippingAddressDropdownOpen;
+    if (dropdown()) {
+      event.preventDefault();
+      if (event.key === 'ArrowDown') {
+        this.focusSelectedAddressOption(party);
+      } else {
+        dropdown.set(false);
+      }
+      return;
+    }
+    dropdown.set(true);
+    queueMicrotask(() => this.focusSelectedAddressOption(party));
+  }
+
+  protected handleAddressOptionKeydown(party: 'billTo' | 'shipTo', event: KeyboardEvent): void {
+    const menuId = party === 'billTo' ? 'bill-address-options' : 'ship-address-options';
+    const triggerId = party === 'billTo' ? 'bill-address-trigger' : 'ship-address-trigger';
+    const menu = document.getElementById(menuId);
+    if (!menu) {
+      return;
+    }
+
+    const options = [...menu.querySelectorAll<HTMLButtonElement>('[role="option"]')];
+    const currentIndex = options.indexOf(event.target as HTMLButtonElement);
+    let nextIndex: number | undefined;
+    if (event.key === 'ArrowDown') {
+      nextIndex = (currentIndex + 1) % options.length;
+    } else if (event.key === 'ArrowUp') {
+      nextIndex = (currentIndex - 1 + options.length) % options.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = options.length - 1;
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeAddressDropdown(party);
+      document.getElementById(triggerId)?.focus();
+      return;
+    }
+
+    if (nextIndex !== undefined && options.length) {
+      event.preventDefault();
+      options[nextIndex].focus();
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected closeAddressDropdownOnDocumentClick(event: MouseEvent): void {
+    const target = event.target;
+    if (target instanceof Element && !target.closest('.address-dropdown')) {
+      this.billingAddressDropdownOpen.set(false);
+      this.shippingAddressDropdownOpen.set(false);
+    }
+  }
+
+  protected selectBillingAddress(docName: string): void {
     const address = this.billingAddressOptions().find((option) => option.docName === docName);
     if (address) {
       this.selectedBillingAddress.set(address.docName);
       this.orderForm.controls.billTo.patchValue(address.details, { emitEvent: false });
       this.patchCustomerPartyIdentity(this.orderForm.controls.billTo, this.selectedCustomerLabel());
       this.orderForm.markAsDirty();
+      this.billingAddressDropdownOpen.set(false);
     }
   }
 
-  protected selectShippingAddress(event: Event): void {
-    const docName = (event.target as HTMLSelectElement).value;
+  protected selectShippingAddress(docName: string): void {
     const address = this.shippingAddressOptions().find((option) => option.docName === docName);
     if (address) {
       this.selectedShippingAddress.set(address.docName);
       this.orderForm.controls.shipTo.patchValue(address.details, { emitEvent: false });
       this.patchCustomerPartyIdentity(this.orderForm.controls.shipTo, this.selectedCustomerLabel());
       this.orderForm.markAsDirty();
+      this.shippingAddressDropdownOpen.set(false);
     }
+  }
+
+  private closeAddressDropdown(party: 'billTo' | 'shipTo'): void {
+    (party === 'billTo' ? this.billingAddressDropdownOpen : this.shippingAddressDropdownOpen).set(false);
+  }
+
+  private focusSelectedAddressOption(party: 'billTo' | 'shipTo'): void {
+    const menuId = party === 'billTo' ? 'bill-address-options' : 'ship-address-options';
+    const selectedId = party === 'billTo'
+      ? this.selectedBillingAddress()
+      : this.selectedShippingAddress();
+    const menu = document.getElementById(menuId);
+    const selectedOption = [...(menu?.querySelectorAll<HTMLButtonElement>('[role="option"]') ?? [])]
+      .find((option) => option.dataset['addressId'] === selectedId);
+    (selectedOption ?? menu?.querySelector<HTMLButtonElement>('[role="option"]'))?.focus();
   }
 
   protected toggleEmailDropdown(party: 'billTo' | 'shipTo'): void {

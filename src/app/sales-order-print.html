@@ -43,7 +43,10 @@
           <h2 class="m-0 mb-2 border-b border-[#a6a6a6] bg-[#f7c58c] px-2 py-[5px] text-center text-sm leading-[1.3]">BILL TO:</h2>
           <div class="print-party-field"><strong>NAME</strong><span>{{ savedOrder.customer_name || savedOrder.customer }}</span></div>
           <div class="print-party-field"><strong>COMPANY NAME</strong><span>{{ savedOrder.company || '—' }}</span></div>
-          <div class="print-party-field print-address-field"><strong>POSTAL ADDRESS</strong><span [innerHTML]="billingAddress() || '—'"></span></div>
+          <div class="print-party-field print-address-field">
+  <strong>POSTAL ADDRESS</strong>
+  <span class="whitespace-pre-line break-words">{{ billingAddress() || '—' }}</span>
+</div>
           <div class="print-party-field"><strong>PHONE NO</strong><span>{{ savedOrder.contact_mobile || billingParty()?.phoneNo || '—' }}</span></div>
           <div class="print-party-field"><strong>FAX NO</strong><span>{{ billingParty()?.faxNo || '—' }}</span></div>
           <div class="print-party-field"><strong>EMAIL</strong><span>{{ savedOrder.contact_email || billingParty()?.email || '—' }}</span></div>
@@ -54,7 +57,10 @@
           <h2 class="m-0 mb-2 border-b border-[#a6a6a6] bg-[#f7c58c] px-2 py-[5px] text-center text-sm leading-[1.3]">SHIP TO:</h2>
           <div class="print-party-field"><strong>NAME</strong><span>{{ savedOrder.customer_name || savedOrder.customer }}</span></div>
           <div class="print-party-field"><strong>COMPANY NAME</strong><span>{{ savedOrder.company || '—' }}</span></div>
-          <div class="print-party-field print-address-field"><strong>POSTAL ADDRESS</strong><span [innerHTML]="shippingAddress() || '—'"></span></div>
+          <div class="print-party-field print-address-field">
+  <strong>POSTAL ADDRESS</strong>
+  <span class="whitespace-pre-line break-words">{{ shippingAddress() || '—' }}</span>
+</div>
           <div class="print-party-field"><strong>PHONE NO</strong><span>{{ shippingParty()?.phoneNo || savedOrder.contact_mobile || '—' }}</span></div>
           <div class="print-party-field"><strong>FAX NO</strong><span>{{ shippingParty()?.faxNo || '—' }}</span></div>
           <div class="print-party-field"><strong>EMAIL</strong><span>{{ shippingParty()?.email || savedOrder.contact_email || '—' }}</span></div>
