@@ -404,11 +404,11 @@ export class App {
     const priceList = this.priceLists().find((option) => option.name === this.orderForm.controls.sellingPriceList.value);
     const transactionDate = this.orderForm.controls.date.value ?? '';
     if (!customer) {
-      this.orderError.set('Select a customer before saving.');
+      this.orderError.set('Customer field is empty. Select a customer before saving.');
       return;
     }
     if (!company) {
-      this.orderError.set('The customer Company Name does not match an available Frappe company.');
+      this.orderError.set('The customer company does not match an available company.');
       return;
     }
     if (!priceList) {
@@ -420,7 +420,7 @@ export class App {
       return;
     }
     if (!this.namingSeries) {
-      this.orderError.set('The Sales Order naming series is not configured in Frappe.');
+      this.orderError.set('The Sales Order naming series is not configured.');
       return;
     }
 
@@ -1064,7 +1064,7 @@ export class App {
       this.orderForm.controls.dueDate.setValue(dueDate, { emitEvent: false });
       this.paymentTermError.set('');
     } else {
-      this.paymentTermError.set(`Frappe has no supported due-date configuration for ${term.payment_term_name}.`);
+      this.paymentTermError.set(`No supported due-date configuration is available for ${term.payment_term_name}.`);
     }
   }
 
@@ -1480,7 +1480,7 @@ export class App {
   }
 
   private errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : 'An unexpected Frappe error occurred.';
+    return error instanceof Error ? error.message : 'An unexpected error occurred.';
   }
 
   private handleCustomerError(error: unknown): string {

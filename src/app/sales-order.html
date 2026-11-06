@@ -173,18 +173,7 @@
       </div>
     @if (optionsLoading() || orderLoading()) {
       <p class="mb-2 text-sm text-[#555]" role="status">
-        {{ orderLoading() ? 'Loading Sales Order...' : 'Loading Sales Order options...' }}
-      </p>
-    }
-    @if (orderError()) {
-      <p class="mb-2 text-sm text-[#8b3c2c]" role="alert">{{ orderError() }}</p>
-    }
-    @if (orderMessage()) {
-      <p class="mb-2 text-sm text-[#355224]" role="status">{{ orderMessage() }}</p>
-    }
-    @if (isExistingOrder() && !canUpdateOrder() && !orderLoading()) {
-      <p class="mb-2 text-sm text-[#8b3c2c]" role="status">
-        {{ orderDocstatus() === 1 ? 'This Sales Order is submitted and is read-only.' : 'This Sales Order is cancelled and is read-only.' }}
+        Loading Sales Order...
       </p>
     }
     @if (customerLoadError() && !customerDropdownOpen() && selectedCustomerLabel()) {
@@ -539,6 +528,17 @@
               [disabled]="savingOrder() || optionsLoading() || orderLoading() || (isExistingOrder() && !canUpdateOrder())"
               (click)="saveOrder()"
             >{{ savingOrder() ? 'Saving...' : isExistingOrder() ? 'Update Sales Order' : 'Save Sales Order' }}</button>
+          }
+          @if (isExistingOrder() && !canUpdateOrder() && !orderLoading()) {
+            <p class="m-0 w-full text-sm text-[#8b3c2c]" role="status">
+              {{ orderDocstatus() === 1 ? 'This Sales Order is submitted and is read-only.' : 'This Sales Order is cancelled and is read-only.' }}
+            </p>
+          }
+          @if (orderError()) {
+            <p class="m-0 w-full text-sm text-[#8b3c2c]" role="alert">{{ orderError() }}</p>
+          }
+          @if (orderMessage()) {
+            <p class="m-0 w-full text-sm text-[#355224]" role="status">{{ orderMessage() }}</p>
           }
         </div>
         <div class="order-total-summary">
