@@ -36,9 +36,29 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
-## Vercel deployment
+## Cloudflare Pages deployment
 
-Production API requests use the same-origin `/api/frappe-proxy` Vercel Function in `api/frappe-proxy.js`, with the route rewrite in `vercel.json`. The function defaults to `https://dev04.agrovisions.pk`; optionally set `FRAPPE_BACKEND_URL` in Vercel Production and Preview environments to override the backend origin. The function forwards Frappe session cookies without logging them. Local development continues to use `src/proxy.conf.json`.
+Production API requests use the Pages Function in `functions/api/frappe-proxy/[[path]].js`. The `functions/` directory must remain at the repository root; the Pages static output directory is `dist/sales-order/browser`. The function forwards Frappe API requests and session cookies to `https://dev04.agrovisions.pk` without logging credentials or cookies.
+
+Build the Angular assets:
+
+```bash
+npm run build -- --configuration production
+```
+
+Run the Pages site and Function locally through Wrangler:
+
+```bash
+npx wrangler pages dev dist/sales-order/browser --compatibility-date 2026-11-06
+```
+
+Deploy assets and Functions together (run from the repository root):
+
+```bash
+npx wrangler pages deploy dist/sales-order/browser --project-name sales-order --branch master
+```
+
+The Cloudflare Pages Git integration can also deploy both when the build command is `npm run build -- --configuration production`, the output directory is `dist/sales-order/browser`, and the repository-root `functions/` directory is included in the build. Do not copy `functions/` into `dist/`.
 
 ## Running unit tests
 

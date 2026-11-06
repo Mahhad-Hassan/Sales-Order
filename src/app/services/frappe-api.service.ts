@@ -154,7 +154,7 @@ export class FrappeApiService {
       }
       if (error.status === 403 && error.headers.get('cf-mitigated') === 'challenge') {
         return new Error(
-          'Cloudflare blocked the Frappe API request with a security challenge. The Frappe/Cloudflare administrator must allow the Vercel proxy for the required API routes; this challenge cannot be completed by the login API client.',
+          'Cloudflare blocked the Frappe API request with a security challenge. The Frappe/Cloudflare administrator must allow the Pages Function proxy for the required API routes; this challenge cannot be completed by the login API client.',
         );
       }
       if (error.status === 401) {
