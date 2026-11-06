@@ -248,6 +248,14 @@ export class App {
     this.updateDateInputError();
   }
 
+  protected updateDeliveryDateFromCalendar(event: Event): void {
+    const date = (event.target as HTMLInputElement).value;
+    this.orderForm.controls.deliveryDate.setValue(date, { emitEvent: false });
+    this.orderForm.controls.deliveryDate.markAsDirty();
+    this.deliveryDateDisplay.set(this.formatDateForDisplay(date));
+    this.updateDateInputError();
+  }
+
   private formatDateForDisplay(value: string): string {
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
     return match ? `${match[2]}-${match[3]}-${match[1]}` : '';

@@ -383,17 +383,33 @@
       <div class="terms-grid">
       <label class="form-field">
         <span class="form-field-label">DELIVERY DATE</span>
-        <input
-          class="form-input"
-          type="text"
-          inputmode="numeric"
-          placeholder="MM-DD-YYYY"
-          autocomplete="off"
-          aria-label="Delivery date"
-          [value]="deliveryDateDisplay()"
-          [disabled]="orderForm.disabled"
-          (input)="updateDateInput($event, 'deliveryDate')"
-        />
+        <span class="relative block">
+          <input
+            class="form-input pr-12"
+            type="text"
+            inputmode="numeric"
+            placeholder="MM-DD-YYYY"
+            autocomplete="off"
+            aria-label="Delivery date"
+            [value]="deliveryDateDisplay()"
+            [disabled]="orderForm.disabled"
+            (input)="updateDateInput($event, 'deliveryDate')"
+          />
+          <span class="pointer-events-none absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#24765f]" aria-hidden="true">
+            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+              <path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17M8 13h.01M12 13h.01M16 13h.01M8 16.5h.01M12 16.5h.01" stroke-linecap="round" />
+            </svg>
+          </span>
+          <input
+            class="absolute inset-y-0 right-0 w-11 cursor-pointer opacity-0"
+            type="date"
+            aria-label="Choose delivery date from calendar"
+            [value]="orderForm.controls.deliveryDate.value ?? ''"
+            [disabled]="orderForm.disabled"
+            (change)="updateDeliveryDateFromCalendar($event)"
+          />
+        </span>
       </label>
       <label class="form-field">
         <span class="form-field-label">DUE DATE</span>
