@@ -104,6 +104,10 @@ export class App {
   });
   protected readonly documentStatusesLoading = signal(false);
   protected readonly documentStatusesError = signal('');
+  protected readonly transactionDateDisplay = signal(this.formatDateForDisplay(this.today()));
+  protected readonly deliveryDateDisplay = signal('');
+  protected readonly dueDateDisplay = signal('');
+  protected readonly dateInputError = signal('');
   protected readonly paymentTermError = signal('');
   protected readonly itemPriceError = signal('');
   protected readonly itemUomError = signal('');
@@ -231,6 +235,63 @@ export class App {
     if (name) {
       void this.router.navigate(['/sales-order', name]);
     }
+  }
+
+  protected updateDateInput(event: Event, field: 'date' | 'deliveryDate' | 'dueDate'): void {
+    const input = event.target as HTMLInputElement;
+    const displayValue = input.value.trim();
+    this.setDateDisplay(field, displayValue);
+
+    const parsedDate = displayValue ? this.parseDisplayDate(displayValue) : '';
+    this.orderForm.controls[field].setValue(parsedDate, { emitEvent: field === 'date' });
+    this.orderForm.controls[field].markAsDirty();
+    this.updateDateInputError();
+  }
+
+  private formatDateForDisplay(value: string): string {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    return match ? `${match[2]}-${match[3]}-${match[1]}` : '';
+  }
+
+  private parseDisplayDate(value: string): string {
+    const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value);
+    if (!match) {
+      return '';
+    }
+    const [, month, day, year] = match;
+    const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+    if (parsed.getFullYear() !== Number(year)
+      || parsed.getMonth() !== Number(month) - 1
+      || parsed.getDate() !== Number(day)) {
+      return '';
+    }
+    return `${year}-${month}-${day}`;
+  }
+
+  private setDateDisplay(field: 'date' | 'deliveryDate' | 'dueDate', value: string): void {
+    if (field === 'date') {
+      this.transactionDateDisplay.set(value);
+    } else if (field === 'deliveryDate') {
+      this.deliveryDateDisplay.set(value);
+    } else {
+      this.dueDateDisplay.set(value);
+    }
+  }
+
+  private syncDateDisplays(): void {
+    this.transactionDateDisplay.set(this.formatDateForDisplay(this.orderForm.controls.date.value ?? ''));
+    this.deliveryDateDisplay.set(this.formatDateForDisplay(this.orderForm.controls.deliveryDate.value ?? ''));
+    this.dueDateDisplay.set(this.formatDateForDisplay(this.orderForm.controls.dueDate.value ?? ''));
+    this.updateDateInputError();
+  }
+
+  private updateDateInputError(): void {
+    const invalidInput = [
+      this.transactionDateDisplay(),
+      this.deliveryDateDisplay(),
+      this.dueDateDisplay(),
+    ].some((value) => Boolean(value) && !this.parseDisplayDate(value));
+    this.dateInputError.set(invalidInput ? 'Enter dates in MM-DD-YYYY format.' : '');
   }
 
   protected backToSalesOrders(): void {
@@ -405,6 +466,10 @@ export class App {
     const transactionDate = this.orderForm.controls.date.value ?? '';
     if (!customer) {
       this.orderError.set('Customer field is empty. Select a customer before saving.');
+      return;
+    }
+    if (this.dateInputError()) {
+      this.orderError.set(this.dateInputError());
       return;
     }
     if (!company) {
@@ -697,6 +762,7 @@ export class App {
           paymentTerms: order.payment_schedule?.[0]?.payment_term ?? '',
           totalBalanceIncludingTax: String(order.total ?? ''),
         }, { emitEvent: false });
+        this.syncDateDisplays();
         this.selectPriceListForCompany(order.company, order.selling_price_list);
         this.replaceItems(order.items ?? []);
         this.orderForm.markAsPristine();
@@ -795,6 +861,7 @@ export class App {
       billTo: EMPTY_CUSTOMER_PARTY,
       shipTo: EMPTY_CUSTOMER_PARTY,
     }, { emitEvent: false });
+    this.syncDateDisplays();
     this.orderForm.enable({ emitEvent: false });
     this.replaceItems([]);
     this.billingAddressOptions.set([]);
@@ -1052,6 +1119,7 @@ export class App {
     const termName = this.orderForm.controls.paymentTerms.value;
     if (!termName) {
       this.orderForm.controls.dueDate.setValue('', { emitEvent: false });
+      this.dueDateDisplay.set('');
       this.paymentTermError.set('');
       return;
     }
@@ -1062,6 +1130,8 @@ export class App {
     const dueDate = calculatePaymentDueDate(this.orderForm.controls.date.value ?? '', term);
     if (dueDate) {
       this.orderForm.controls.dueDate.setValue(dueDate, { emitEvent: false });
+      this.dueDateDisplay.set(this.formatDateForDisplay(dueDate));
+      this.updateDateInputError();
       this.paymentTermError.set('');
     } else {
       this.paymentTermError.set(`No supported due-date configuration is available for ${term.payment_term_name}.`);

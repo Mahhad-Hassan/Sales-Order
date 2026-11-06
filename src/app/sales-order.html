@@ -168,7 +168,18 @@
         </div>
         <label class="form-field" for="order-date">
           <span class="form-field-label">Date</span>
-          <input id="order-date" aria-label="Date" lang="en-US" type="date" formControlName="date" class="form-input" />
+          <input
+            id="order-date"
+            class="form-input"
+            aria-label="Date"
+            type="text"
+            inputmode="numeric"
+            placeholder="MM-DD-YYYY"
+            autocomplete="off"
+            [value]="transactionDateDisplay()"
+            [disabled]="orderForm.disabled"
+            (input)="updateDateInput($event, 'date')"
+          />
         </label>
       </div>
     @if (optionsLoading() || orderLoading()) {
@@ -372,11 +383,31 @@
       <div class="terms-grid">
       <label class="form-field">
         <span class="form-field-label">DELIVERY DATE</span>
-        <input class="form-input" type="date" lang="en-US" placeholder="mm/dd/yyyy" aria-label="Delivery date" formControlName="deliveryDate" />
+        <input
+          class="form-input"
+          type="text"
+          inputmode="numeric"
+          placeholder="MM-DD-YYYY"
+          autocomplete="off"
+          aria-label="Delivery date"
+          [value]="deliveryDateDisplay()"
+          [disabled]="orderForm.disabled"
+          (input)="updateDateInput($event, 'deliveryDate')"
+        />
       </label>
       <label class="form-field">
         <span class="form-field-label">DUE DATE</span>
-        <input class="form-input" type="date" lang="en-US" aria-label="Due date" formControlName="dueDate" />
+        <input
+          class="form-input"
+          type="text"
+          inputmode="numeric"
+          placeholder="MM-DD-YYYY"
+          autocomplete="off"
+          aria-label="Due date"
+          [value]="dueDateDisplay()"
+          [disabled]="orderForm.disabled"
+          (input)="updateDateInput($event, 'dueDate')"
+        />
       </label>
       <label class="form-field">
         <span class="form-field-label">PAYMENT TERMS</span>

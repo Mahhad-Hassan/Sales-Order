@@ -128,7 +128,7 @@ export class SalesOrderPrintPage {
       return '—';
     }
     const [year, month, day] = value.slice(0, 10).split('-');
-    return year && month && day ? `${month}/${day}/${year}` : value;
+    return year && month && day ? `${month}-${day}-${year}` : value;
   }
 
   protected paymentTermName(): string {
