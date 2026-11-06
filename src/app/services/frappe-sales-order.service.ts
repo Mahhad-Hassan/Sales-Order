@@ -14,6 +14,7 @@ import {
   SalesOrderRecord,
   SellingPriceListOption,
   WorkflowConfiguration,
+  WorkflowTransition,
   WorkflowStateOption,
 } from '../models/sales-order.model';
 import { FrappeDocTypeMetadata } from '../models/frappe-api.model';
@@ -32,6 +33,7 @@ export class FrappeSalesOrderService {
     priceLists: SellingPriceListOption[];
     orders: SalesOrderListOption[];
     salesOrderMetadata: FrappeDocTypeMetadata;
+    salesOrderWorkflowStateField: string | null;
   }> {
     return forkJoin({
       companies: this.api.getList<CompanyOption>(
@@ -66,11 +68,25 @@ export class FrappeSalesOrderService {
         100,
       ),
       salesOrderMetadata: this.api.getDocument<FrappeDocTypeMetadata>('DocType', 'Sales Order'),
+      salesOrderWorkflowStateField: this.getActiveWorkflowStateField('Sales Order'),
     });
   }
 
   getSalesOrder(name: string): Observable<SalesOrderRecord> {
     return this.api.getDocument<SalesOrderRecord>('Sales Order', name);
+  }
+
+  getSalesOrderWorkflowTransitions(name: string): Observable<WorkflowTransition[]> {
+    return this.api.callMethod<WorkflowTransition[]>('frappe.model.workflow.get_transitions', {
+      doc: JSON.stringify({ doctype: 'Sales Order', name }),
+    });
+  }
+
+  applySalesOrderWorkflowAction(name: string, action: string): Observable<SalesOrderRecord> {
+    return this.api.callMethod<SalesOrderRecord>('frappe.model.workflow.apply_workflow', {
+      doc: JSON.stringify({ doctype: 'Sales Order', name }),
+      action,
+    }).pipe(switchMap(() => this.getSalesOrder(name)));
   }
 
   getAssignmentOptions(): Observable<{

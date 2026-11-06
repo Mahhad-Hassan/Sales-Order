@@ -700,7 +700,31 @@
             (click)="printOrder()"
           >Print</button>
           } @else {
-            @if (isExistingOrder() && canUpdateOrder()) {
+            @if (isExistingOrder() && salesOrderWorkflowActive()) {
+              <div class="relative">
+                <button
+                  class="secondary-action"
+                  type="button"
+                  [disabled]="savingOrder() || orderLoading() || workflowTransitionsLoading() || !workflowTransitions().length || orderForm.dirty"
+                  [attr.aria-expanded]="workflowTransitionMenuOpen()"
+                  aria-haspopup="menu"
+                  (click)="toggleWorkflowTransitionMenu()"
+                >{{ workflowTransitionsLoading() ? 'Loading actions...' : 'Next Action' }}</button>
+                @if (workflowTransitionMenuOpen()) {
+                  <div class="absolute bottom-[calc(100%+8px)] left-0 z-10 grid min-w-44 gap-1 rounded-xl border border-[#e3eae6] bg-white p-2 shadow-xl" role="menu" aria-label="Available workflow actions">
+                    @for (transition of workflowTransitions(); track transition.action) {
+                      <button
+                        class="rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#24765f] hover:bg-[#e6f3ee] focus-visible:outline-2 focus-visible:outline-[#24765f]"
+                        type="button"
+                        role="menuitem"
+                        [disabled]="workflowTransitionsLoading()"
+                        (click)="applyWorkflowTransition(transition)"
+                      >{{ transition.action }}</button>
+                    }
+                  </div>
+                }
+              </div>
+            } @else if (isExistingOrder() && canUpdateOrder()) {
               <button
                 class="secondary-action"
                 type="button"
@@ -719,6 +743,12 @@
             <p class="m-0 w-full text-sm text-[#8b3c2c]" role="status">
               {{ orderDocstatus() === 1 ? 'This Sales Order is submitted and is read-only.' : 'This Sales Order is cancelled and is read-only.' }}
             </p>
+          }
+          @if (workflowTransitionError()) {
+            <p class="m-0 w-full text-sm text-[#8b3c2c]" role="alert">{{ workflowTransitionError() }}</p>
+          }
+          @if (isExistingOrder() && salesOrderWorkflowActive() && !workflowTransitionsLoading() && !workflowTransitions().length && !workflowTransitionError() && !orderLoading() && !orderForm.dirty && orderDocstatus() === 0) {
+            <p class="m-0 w-full text-sm text-[#6d7d77]" role="status">No workflow actions are currently available.</p>
           }
           @if (orderError()) {
             <p class="m-0 w-full text-sm text-[#8b3c2c]" role="alert">{{ orderError() }}</p>

@@ -17,6 +17,7 @@ import {
   SalesOrderRecord,
   SalesOrderTaxRecord,
   SellingPriceListOption,
+  WorkflowTransition,
 } from './models/sales-order.model';
 import { FrappeAuthService } from './services/frappe-auth.service';
 import { FrappeCustomerService } from './services/frappe-customer.service';
@@ -52,6 +53,7 @@ export class App {
   private customerDetailsRequest = 0;
   private orderDetailsRequest = 0;
   private documentStatusRequest = 0;
+  private workflowTransitionRequest = 0;
   private assignmentOptionsRequest = 0;
   private assignmentGroupRequest = 0;
   private activeCustomerName = '';
@@ -108,6 +110,11 @@ export class App {
   });
   protected readonly documentStatusesLoading = signal(false);
   protected readonly documentStatusesError = signal('');
+  protected readonly salesOrderWorkflowActive = signal(false);
+  protected readonly workflowTransitions = signal<WorkflowTransition[]>([]);
+  protected readonly workflowTransitionMenuOpen = signal(false);
+  protected readonly workflowTransitionsLoading = signal(false);
+  protected readonly workflowTransitionError = signal('');
   protected readonly transactionDateDisplay = signal(this.formatDateForDisplay(this.today()));
   protected readonly deliveryDateDisplay = signal('');
   protected readonly dueDateDisplay = signal('');
@@ -629,6 +636,51 @@ export class App {
     this.persistOrder(true);
   }
 
+  protected toggleWorkflowTransitionMenu(): void {
+    if (this.workflowTransitionsLoading() || !this.workflowTransitions().length) {
+      return;
+    }
+    this.workflowTransitionMenuOpen.update((open) => !open);
+  }
+
+  protected applyWorkflowTransition(transition: WorkflowTransition): void {
+    if (!this.orderName || !this.salesOrderWorkflowActive() || this.workflowTransitionsLoading()) {
+      return;
+    }
+    if (this.orderForm.dirty) {
+      this.workflowTransitionError.set('Save your changes before applying a workflow action.');
+      this.workflowTransitionMenuOpen.set(false);
+      return;
+    }
+
+    this.workflowTransitionsLoading.set(true);
+    this.workflowTransitionMenuOpen.set(false);
+    this.workflowTransitionError.set('');
+    this.salesOrders.applySalesOrderWorkflowAction(this.orderName, transition.action).pipe(
+      finalize(() => this.workflowTransitionsLoading.set(false)),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: (order) => {
+        this.orderDocstatus.set(order.docstatus);
+        this.loadedSalesOrderSnapshot = order;
+        this.canUpdateOrder.set(order.docstatus === 0);
+        if (order.docstatus === 1 || order.docstatus === 2) {
+          this.orderForm.disable({ emitEvent: false });
+        } else {
+          this.orderForm.enable({ emitEvent: false });
+        }
+        this.orderForm.markAsPristine();
+        this.orderMessage.set(`Sales Order ${order.name}: ${transition.action} completed.`);
+        this.refreshDocumentStatuses(order);
+        this.refreshWorkflowTransitions(order.name);
+      },
+      error: (error: unknown) => {
+        this.workflowTransitionError.set(`Could not apply "${transition.action}": ${this.errorMessage(error)}`);
+        this.refreshWorkflowTransitions(this.orderName);
+      },
+    });
+  }
+
   protected printOrder(): void {
     if (this.orderDocstatus() === 1 && this.orderName) {
       void this.router.navigate(['/sales-order', this.orderName, 'print']);
@@ -828,6 +880,7 @@ export class App {
         this.orderForm.markAsPristine();
         this.updateOrderOption(saved);
         this.refreshDocumentStatuses(saved);
+        this.refreshWorkflowTransitions(saved.name);
       },
       error: (error: unknown) => this.orderError.set(this.errorMessage(error)),
     });
@@ -844,6 +897,10 @@ export class App {
           priceList.selling === 1 && priceList.enabled === 1,
         ));
         this.salesOrderOptions.set(options.orders);
+        this.salesOrderWorkflowActive.set(Boolean(options.salesOrderWorkflowStateField));
+        if (this.orderName) {
+          this.refreshWorkflowTransitions(this.orderName);
+        }
         const namingSeries = options.salesOrderMetadata.fields.find((field) => field.fieldname === 'naming_series');
         this.namingSeries = namingSeries?.default
           || namingSeries?.options?.split('\n').find((option) => option.trim())
@@ -869,6 +926,11 @@ export class App {
     const requestId = ++this.orderDetailsRequest;
     this.orderName = name;
     this.currentOrderName.set(name);
+    this.workflowTransitionRequest++;
+    this.workflowTransitions.set([]);
+    this.workflowTransitionsLoading.set(false);
+    this.workflowTransitionMenuOpen.set(false);
+    this.workflowTransitionError.set('');
     this.documentStatusRequest++;
     this.documentStatuses.set({
       salesOrder: 'Loading...',
@@ -900,6 +962,7 @@ export class App {
         this.currentOrderName.set(order.name);
         this.orderDocstatus.set(order.docstatus);
         this.refreshDocumentStatuses(order);
+        this.refreshWorkflowTransitions(order.name);
         this.loadedPaymentSchedule = order.payment_schedule ?? [];
         this.loadedPaymentTermName = this.loadedPaymentSchedule[0]?.payment_term ?? '';
         this.loadedSalesOrderSnapshot = order;
@@ -999,8 +1062,46 @@ export class App {
           });
           this.documentStatusesLoading.set(false);
           this.documentStatusesError.set(`Could not load document statuses: ${this.errorMessage(error)}`);
+          this.workflowTransitions.set([]);
+          this.workflowTransitionsLoading.set(false);
+          this.workflowTransitionError.set(`Could not load workflow actions: ${this.errorMessage(error)}`);
           this.orderError.set(`Could not load Sales Order ${name}: ${this.errorMessage(error)}`);
         }
+      },
+    });
+  }
+
+  private refreshWorkflowTransitions(name: string): void {
+    const requestId = ++this.workflowTransitionRequest;
+    this.workflowTransitionMenuOpen.set(false);
+    this.workflowTransitionError.set('');
+    if (!name || !this.salesOrderWorkflowActive()) {
+      this.workflowTransitions.set([]);
+      this.workflowTransitionsLoading.set(false);
+      return;
+    }
+
+    this.workflowTransitionsLoading.set(true);
+    this.salesOrders.getSalesOrderWorkflowTransitions(name).pipe(
+      finalize(() => {
+        if (requestId === this.workflowTransitionRequest) {
+          this.workflowTransitionsLoading.set(false);
+        }
+      }),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: (transitions) => {
+        if (requestId !== this.workflowTransitionRequest || this.orderName !== name) {
+          return;
+        }
+        this.workflowTransitions.set(transitions);
+      },
+      error: (error: unknown) => {
+        if (requestId !== this.workflowTransitionRequest || this.orderName !== name) {
+          return;
+        }
+        this.workflowTransitions.set([]);
+        this.workflowTransitionError.set(`Could not load workflow actions: ${this.errorMessage(error)}`);
       },
     });
   }
@@ -1008,6 +1109,11 @@ export class App {
   private resetForNewOrder(): void {
     this.orderDetailsRequest++;
     this.documentStatusRequest++;
+    this.workflowTransitionRequest++;
+    this.workflowTransitions.set([]);
+    this.workflowTransitionsLoading.set(false);
+    this.workflowTransitionMenuOpen.set(false);
+    this.workflowTransitionError.set('');
     this.documentStatuses.set({
       salesOrder: 'Not Created',
       deliveryNote: 'Not Created',

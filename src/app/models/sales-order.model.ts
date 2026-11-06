@@ -75,6 +75,7 @@ export interface SalesOrderRecord extends Record<string, unknown> {
   incoterm?: string | null;
   payment_terms_template?: string | null;
   status?: string;
+  workflow_state?: string;
   total?: number;
   total_taxes_and_charges?: number;
   grand_total?: number;
@@ -149,6 +150,13 @@ export interface WorkflowConfiguration {
   document_type: string;
   workflow_state_field: string;
   is_active: number;
+}
+
+export interface WorkflowTransition {
+  state: string;
+  action: string;
+  next_state: string;
+  allowed: string;
 }
 
 export interface WorkflowStateOption {
