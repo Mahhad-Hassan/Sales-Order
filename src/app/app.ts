@@ -116,8 +116,8 @@ export class App {
   protected readonly workflowTransitionsLoading = signal(false);
   protected readonly workflowTransitionError = signal('');
   protected readonly transactionDateDisplay = signal(this.formatDateForDisplay(this.today()));
-  protected readonly deliveryDateDisplay = signal('');
-  protected readonly dueDateDisplay = signal('');
+  protected readonly deliveryDateDisplay = signal(this.formatDateForDisplay(this.today()));
+  protected readonly dueDateDisplay = signal(this.formatDateForDisplay(this.today()));
   protected readonly dateInputError = signal('');
   protected readonly assignmentDialogOpen = signal(false);
   protected readonly assignmentUsers = signal<AssignmentUserOption[]>([]);
@@ -162,8 +162,8 @@ export class App {
       email: [''],
       ntn: [''],
     }),
-    deliveryDate: [''],
-    dueDate: [''],
+    deliveryDate: [this.today()],
+    dueDate: [this.today()],
     paymentTerms: [''],
     incoterm: [''],
     items: this.itemRows,
@@ -281,9 +281,20 @@ export class App {
     this.updateDateInputError();
   }
 
+  protected openDeliveryDatePicker(datePicker: HTMLInputElement): void {
+    if (this.orderForm.disabled) {
+      return;
+    }
+    if (typeof datePicker.showPicker === 'function') {
+      datePicker.showPicker();
+    } else {
+      datePicker.click();
+    }
+  }
+
   private formatDateForDisplay(value: string): string {
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-    return match ? `${match[2]}-${match[3]}-${match[1]}` : '';
+    return match ? `${match[3]}-${match[2]}-${match[1]}` : '';
   }
 
   private parseDisplayDate(value: string): string {
@@ -291,7 +302,7 @@ export class App {
     if (!match) {
       return '';
     }
-    const [, month, day, year] = match;
+    const [, day, month, year] = match;
     const parsed = new Date(Number(year), Number(month) - 1, Number(day));
     if (parsed.getFullYear() !== Number(year)
       || parsed.getMonth() !== Number(month) - 1
@@ -324,7 +335,7 @@ export class App {
       this.deliveryDateDisplay(),
       this.dueDateDisplay(),
     ].some((value) => Boolean(value) && !this.parseDisplayDate(value));
-    this.dateInputError.set(invalidInput ? 'Enter dates in MM-DD-YYYY format.' : '');
+    this.dateInputError.set(invalidInput ? 'Enter dates in DD-MM-YYYY format.' : '');
   }
 
   protected backToSalesOrders(): void {
@@ -1001,8 +1012,8 @@ export class App {
         this.orderForm.patchValue({
           customer: order.customer,
           date: formatDateForInput(order.transaction_date),
-          deliveryDate: formatDateForInput(order.delivery_date),
-          dueDate: formatDateForInput(order.payment_schedule?.[0]?.due_date),
+          deliveryDate: formatDateForInput(order.delivery_date) || this.today(),
+          dueDate: formatDateForInput(order.payment_schedule?.[0]?.due_date) || this.today(),
           incoterm: order.incoterm ?? '',
           company: order.company,
           sellingPriceList: order.selling_price_list,
@@ -1143,8 +1154,8 @@ export class App {
       date: this.today(),
       company: '',
       sellingPriceList: '',
-      deliveryDate: '',
-      dueDate: '',
+      deliveryDate: this.today(),
+      dueDate: this.today(),
       paymentTerms: '',
       incoterm: '',
       totalBalanceIncludingTax: '',
@@ -1408,8 +1419,10 @@ export class App {
   private recalculateDueDate(): void {
     const termName = this.orderForm.controls.paymentTerms.value;
     if (!termName) {
-      this.orderForm.controls.dueDate.setValue('', { emitEvent: false });
-      this.dueDateDisplay.set('');
+      const today = this.today();
+      this.orderForm.controls.dueDate.setValue(today, { emitEvent: false });
+      this.dueDateDisplay.set(this.formatDateForDisplay(today));
+      this.updateDateInputError();
       this.paymentTermError.set('');
       return;
     }

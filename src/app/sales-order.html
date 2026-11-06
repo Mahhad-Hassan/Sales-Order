@@ -182,7 +182,7 @@
             aria-label="Date"
             type="text"
             inputmode="numeric"
-            placeholder="MM-DD-YYYY"
+            placeholder="DD-MM-YYYY"
             autocomplete="off"
             [value]="transactionDateDisplay()"
             [disabled]="orderForm.disabled"
@@ -527,11 +527,12 @@
             class="form-input pr-12"
             type="text"
             inputmode="numeric"
-            placeholder="MM-DD-YYYY"
+            placeholder="DD-MM-YYYY"
             autocomplete="off"
             aria-label="Delivery date"
             [value]="deliveryDateDisplay()"
             [disabled]="orderForm.disabled"
+            (click)="openDeliveryDatePicker(deliveryDatePicker)"
             (input)="updateDateInput($event, 'deliveryDate')"
           />
           <span class="pointer-events-none absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#24765f]" aria-hidden="true">
@@ -541,9 +542,11 @@
             </svg>
           </span>
           <input
-            class="absolute inset-y-0 right-0 w-11 cursor-pointer opacity-0"
+            class="pointer-events-none absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 opacity-0"
             type="date"
-            aria-label="Choose delivery date from calendar"
+            #deliveryDatePicker
+            tabindex="-1"
+            aria-hidden="true"
             [value]="orderForm.controls.deliveryDate.value ?? ''"
             [disabled]="orderForm.disabled"
             (change)="updateDeliveryDateFromCalendar($event)"
@@ -556,7 +559,7 @@
           class="form-input"
           type="text"
           inputmode="numeric"
-          placeholder="MM-DD-YYYY"
+          placeholder="DD-MM-YYYY"
           autocomplete="off"
           aria-label="Due date"
           [value]="dueDateDisplay()"
