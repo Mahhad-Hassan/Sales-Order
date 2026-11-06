@@ -38,7 +38,7 @@ This will compile your project and store the build artifacts in the `dist/` dire
 
 ## Cloudflare Pages deployment
 
-Production API requests use the Pages Function in `functions/api/frappe-proxy/[[path]].js`. The `functions/` directory must remain at the repository root; the Pages static output directory is `dist/sales-order/browser`. The function forwards Frappe API requests and session cookies to `https://dev04.agrovisions.pk` without logging credentials or cookies.
+Production API requests use the Pages Function in `functions\api\frappe-proxy\[[path]].ts`. The `functions\` directory must remain at the repository root; the Pages static output directory is `dist\sales-order\browser`. `public\_routes.json` ensures `/api/frappe-proxy/*` invokes the Function while static files do not. The function forwards Frappe API requests and session cookies to `https://dev04.agrovisions.pk` without logging credentials or cookies.
 
 Build the Angular assets:
 
@@ -46,19 +46,33 @@ Build the Angular assets:
 npm run build -- --configuration production
 ```
 
+Build the Pages Function bundle and route manifest:
+
+```bash
+npx wrangler pages functions build functions --outdir .wrangler\pages-function --build-output-directory dist\sales-order\browser --output-routes-path dist\sales-order\browser\_routes.json
+```
+
 Run the Pages site and Function locally through Wrangler:
 
 ```bash
-npx wrangler pages dev dist/sales-order/browser --compatibility-date 2026-11-06
+npx wrangler pages dev dist\sales-order\browser --compatibility-date 2026-11-06
 ```
+
+In another terminal, confirm the login route reaches Frappe (use only placeholder credentials for this smoke test):
+
+```bash
+curl.exe --include --request POST --header "Content-Type: application/json" --data "{\"usr\":\"invalid-test-user\",\"pwd\":\"invalid-test-password\"}" http://127.0.0.1:8788/api/frappe-proxy/api/method/login
+```
+
+An upstream Frappe error such as HTTP 401 is expected for placeholder credentials; HTTP 405 from Pages is not.
 
 Deploy assets and Functions together (run from the repository root):
 
 ```bash
-npx wrangler pages deploy dist/sales-order/browser --project-name sales-order --branch master
+npx wrangler pages deploy dist\sales-order\browser --project-name sales-order --branch master
 ```
 
-The Cloudflare Pages Git integration can also deploy both when the build command is `npm run build -- --configuration production`, the output directory is `dist/sales-order/browser`, and the repository-root `functions/` directory is included in the build. Do not copy `functions/` into `dist/`.
+The Cloudflare Pages Git integration can also deploy both when the build command is `npm run build -- --configuration production`, the output directory is `dist\sales-order\browser`, and the repository-root `functions\` directory is included in the deployment. Set the Pages project root to the repository root. Do not copy `functions\` into `dist\`.
 
 ## Running unit tests
 

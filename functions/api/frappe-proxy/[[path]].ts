@@ -13,7 +13,6 @@ const FRAPPE_COOKIE_NAMES = new Set([
 ]);
 const HOP_BY_HOP_HEADERS = [
   'connection',
-  'content-encoding',
   'content-length',
   'host',
   'keep-alive',
@@ -25,7 +24,11 @@ const HOP_BY_HOP_HEADERS = [
   'upgrade',
 ];
 
-export async function onRequest({ request }) {
+interface PagesRequestContext {
+  request: Request;
+}
+
+export async function onRequest({ request }: PagesRequestContext): Promise<Response> {
   if (!ALLOWED_METHODS.has(request.method)) {
     return new Response('Method not allowed', {
       status: 405,
@@ -69,7 +72,7 @@ export async function onRequest({ request }) {
     headers.set('X-Frappe-CSRF-Token', csrfToken);
   }
 
-  let upstream;
+  let upstream: Response;
   try {
     upstream = await fetch(backendUrl, {
       method: request.method,
