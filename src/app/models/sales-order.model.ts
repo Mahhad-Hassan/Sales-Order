@@ -14,14 +14,7 @@ export interface IncotermOption {
 export interface CompanyOption {
   name: string;
   default_currency: string;
-}
-
-export interface WarehouseOption {
-  name: string;
-  warehouse_name: string;
-  company: string;
-  is_group: number;
-  disabled: number;
+  default_warehouse?: string | null;
 }
 
 export interface SellingPriceListOption {
@@ -60,6 +53,7 @@ export interface SalesOrderRecord extends Record<string, unknown> {
   customer: string;
   customer_name?: string;
   company: string;
+  set_warehouse?: string | null;
   transaction_date: string;
   delivery_date?: string | null;
   currency: string;

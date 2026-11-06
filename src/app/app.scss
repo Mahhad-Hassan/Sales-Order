@@ -357,7 +357,12 @@
   padding: 8px 10px;
   border-top: 1px solid #e3eae6;
   border-bottom: 1px solid #e3eae6;
-  background: #fbfdfc;
+  background: #f3f9f6;
+  box-shadow: inset 0 0 0 1px rgb(227 234 230 / 45%);
+}
+
+.items-table tbody tr:hover td {
+  background: #eaf5f0;
 }
 
 .items-table td:first-child {
@@ -374,6 +379,8 @@
 
 .items-table td input {
   min-height: 38px;
+  color: #1c2b26;
+  opacity: 1;
   font: inherit;
   font-size: 14px;
 }

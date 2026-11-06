@@ -15,7 +15,6 @@ import {
   SalesOrderRecord,
   SalesOrderTaxRecord,
   SellingPriceListOption,
-  WarehouseOption,
 } from './models/sales-order.model';
 import { FrappeAuthService } from './services/frappe-auth.service';
 import { FrappeCustomerService } from './services/frappe-customer.service';
@@ -82,7 +81,6 @@ export class App {
   protected readonly billingEmailDropdownOpen = signal(false);
   protected readonly shippingEmailDropdownOpen = signal(false);
   protected readonly companies = signal<CompanyOption[]>([]);
-  protected readonly warehouses = signal<WarehouseOption[]>([]);
   protected readonly priceLists = signal<SellingPriceListOption[]>([]);
   protected readonly incoterms = signal<IncotermOption[]>([]);
   protected readonly paymentTerms = signal<PaymentTermOption[]>([]);
@@ -102,7 +100,6 @@ export class App {
   protected readonly orderForm = this.formBuilder.group({
     customer: [''],
     date: [this.today()],
-    sourceWarehouse: [''],
     company: [''],
     sellingPriceList: [''],
     billTo: this.formBuilder.group({
@@ -298,33 +295,30 @@ export class App {
       );
       const qty = Number(quantityValue);
       const rateText = String(rateValue ?? '').trim();
-      const hasRate = rateText.length > 0;
-      const rate = hasRate ? Number(rateText) : undefined;
-      const amountText = String(row['total'] ?? '').trim();
-      const amount = amountText ? Number(amountText) : undefined;
+      const rate = Number(rateText);
       const savedItem = this.loadedSalesOrderSnapshot?.items[index];
       if (!item || !Number.isFinite(qty) || qty <= 0
-        || (hasRate && (!Number.isFinite(rate) || Number(rate) < 0))
-        || (amountText && (!Number.isFinite(amount) || Number(amount) < 0))) {
-        this.orderError.set(`Enter a valid product, positive quantity, non-negative unit price, and valid total on item row ${index + 1}.`);
+        || !rateText || !Number.isFinite(rate) || rate < 0) {
+        this.orderError.set(`Enter a valid product, positive quantity, and non-negative unit price on item row ${index + 1}.`);
         return;
       }
 
       const unit = typeof row['unit'] === 'string' && row['unit'].trim()
         ? row['unit'].trim()
         : item.stock_uom;
-      const lineAmount = amount ?? (rate === undefined ? undefined : this.roundAmount(qty * rate));
+      const lineAmount = this.roundAmount(qty * rate);
+      const itemWarehouse = savedItem?.item_code === item.item_code && savedItem.warehouse
+        ? savedItem.warehouse
+        : company.default_warehouse;
       items.push({
         item_code: item.item_code,
         item_name: item.item_name,
         qty,
         uom: unit,
         stock_uom: item.stock_uom,
-        warehouse: this.orderForm.controls.sourceWarehouse.value
-          || (savedItem?.item_code === item.item_code ? savedItem.warehouse : undefined)
-          || undefined,
-        ...(rate === undefined ? {} : { rate }),
-        ...(lineAmount === undefined ? {} : { amount: lineAmount }),
+        ...(itemWarehouse ? { warehouse: itemWarehouse } : {}),
+        rate,
+        amount: lineAmount,
       });
     }
     if (!items.length) {
@@ -378,6 +372,9 @@ export class App {
           doctype: 'Sales Order',
           naming_series: this.namingSeries,
           company: company.name,
+          set_warehouse: this.loadedSalesOrderSnapshot?.company === company.name
+            ? this.loadedSalesOrderSnapshot.set_warehouse || company.default_warehouse || null
+            : company.default_warehouse || null,
           customer,
           order_type: 'Sales',
           transaction_date: transactionDate,
@@ -402,6 +399,7 @@ export class App {
           switchMap((saved) => submitAfterSave
             ? this.salesOrders.submitSalesOrder(saved)
             : of(saved)),
+          switchMap((saved) => this.salesOrders.getSalesOrder(saved.name)),
         );
       }),
       finalize(() => this.savingOrder.set(false)),
@@ -444,9 +442,6 @@ export class App {
     this.salesOrders.loadOptions().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (options) => {
         this.companies.set(options.companies);
-        this.warehouses.set(options.warehouses.filter((warehouse) =>
-          warehouse.disabled === 0 && warehouse.is_group === 0,
-        ));
         this.incoterms.set(mergeUniqueByName(options.incoterms, this.incoterms()));
         this.orderItems.set(options.items);
         this.paymentTerms.set(mergeUniqueByName(options.paymentTerms, this.paymentTerms()));
@@ -539,7 +534,6 @@ export class App {
         this.orderForm.patchValue({
           customer: order.customer,
           date: formatDateForInput(order.transaction_date),
-          sourceWarehouse: this.getCommonItemWarehouse(order.items ?? []),
           deliveryDate: formatDateForInput(order.delivery_date),
           dueDate: formatDateForInput(order.payment_schedule?.[0]?.due_date),
           incoterm: order.incoterm ?? '',
@@ -621,7 +615,6 @@ export class App {
     this.orderForm.reset({
       customer: '',
       date: this.today(),
-      sourceWarehouse: '',
       company: '',
       sellingPriceList: '',
       deliveryDate: '',
@@ -678,6 +671,12 @@ export class App {
   private handleProductSelection(row: FormGroup, productName: string): void {
     const requestId = (this.itemPriceRequestIds.get(row) ?? 0) + 1;
     this.itemPriceRequestIds.set(row, requestId);
+    this.manualPriceEditIds.set(row, (this.manualPriceEditIds.get(row) ?? 0) + 1);
+    this.autoUnitPrices.delete(row);
+    row.controls['unitPrice'].setValue('', { emitEvent: false });
+    row.controls['unit'].setValue('', { emitEvent: false });
+    this.itemPriceError.set('');
+    this.updateItemTotals();
     if (this.orderLoading()) {
       return;
     }
@@ -721,17 +720,17 @@ export class App {
     requestId: number,
   ): void {
     const priceList = this.orderForm.controls.sellingPriceList.value ?? '';
-    if (!priceList) {
-      return;
-    }
-
     const unitPriceControl = row.controls['unitPrice'];
     const previousAutoPrice = this.autoUnitPrices.get(row);
     const currentPrice = String(unitPriceControl.value ?? '').trim();
     if (previousAutoPrice !== undefined && Number(currentPrice) === previousAutoPrice) {
       unitPriceControl.setValue('', { emitEvent: false });
       this.autoUnitPrices.delete(row);
+      this.updateItemTotals();
     } else if (!overwriteCurrentPrice && currentPrice) {
+      return;
+    }
+    if (!priceList) {
       return;
     }
 
@@ -747,11 +746,18 @@ export class App {
           return;
         }
         const selectedPrice = this.findValidItemPrice(
-          prices,
+          prices.filter((price) =>
+            price.item_code === item.item_code
+            && price.price_list === priceList
+            && price.selling === 1,
+          ),
           String(row.controls['unit'].value ?? ''),
           this.orderForm.controls.date.value ?? '',
         );
         if (!selectedPrice) {
+          this.itemPriceError.set(
+            `No Item Price found for ${item.item_code} in ${priceList}. Enter a unit price manually.`,
+          );
           return;
         }
         const currentValue = String(unitPriceControl.value ?? '').trim();
@@ -765,7 +771,7 @@ export class App {
       error: (error: unknown) => {
         if (this.itemPriceRequestIds.get(row) === requestId) {
           this.itemPriceError.set(
-            `Could not fetch the stored price for ${item.item_code}: ${this.errorMessage(error)} Enter a unit price manually.`,
+            `Could not fetch the Item Price for ${item.item_code}: ${this.errorMessage(error)} Enter a unit price manually.`,
           );
         }
       },
@@ -777,16 +783,19 @@ export class App {
     unit: string,
     date: string,
   ): ItemPriceOption | undefined {
-    const validPrices = prices.filter((price) =>
+    const availablePrices = prices.filter((price) =>
       Number.isFinite(price.price_list_rate)
       && price.price_list_rate >= 0
-      && (!price.valid_from || price.valid_from <= date)
+    );
+    const matchingUnit = availablePrices.filter((price) => price.uom === unit);
+    const defaultUnit = availablePrices.filter((price) => !price.uom);
+    const newestPrice = (candidates: ItemPriceOption[]) => candidates
+      .sort((left, right) => (right.valid_from ?? '').localeCompare(left.valid_from ?? ''))[0];
+    const dateValidPrices = [...matchingUnit, ...defaultUnit].filter((price) =>
+      (!price.valid_from || price.valid_from <= date)
       && (!price.valid_upto || price.valid_upto >= date),
     );
-    const matchingUnit = validPrices.filter((price) => price.uom === unit);
-    const defaultUnit = validPrices.filter((price) => !price.uom);
-    return [...matchingUnit, ...defaultUnit]
-      .sort((left, right) => (right.valid_from ?? '').localeCompare(left.valid_from ?? ''))[0];
+    return newestPrice(dateValidPrices) ?? newestPrice([...matchingUnit, ...defaultUnit]);
   }
 
   private updateItemTotals(): void {
@@ -855,16 +864,11 @@ export class App {
     while (this.itemRows.length > rowValues.length) {
       this.itemRows.removeAt(this.itemRows.length - 1, { emitEvent: false });
     }
-  }
-
-  private getCommonItemWarehouse(items: SalesOrderRecord['items']): string {
-    if (!items.length) {
-      return '';
+    for (const row of this.itemRows.controls) {
+      this.itemPriceRequestIds.set(row, (this.itemPriceRequestIds.get(row) ?? 0) + 1);
+      this.manualPriceEditIds.set(row, (this.manualPriceEditIds.get(row) ?? 0) + 1);
+      this.autoUnitPrices.delete(row);
     }
-    const firstWarehouse = items[0].warehouse?.trim() ?? '';
-    return items.every((item) => (item.warehouse?.trim() ?? '') === firstWarehouse)
-      ? firstWarehouse
-      : '';
   }
 
   private updateOrderOption(order: SalesOrderRecord): void {
@@ -918,6 +922,8 @@ export class App {
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(() => {
       this.manualPriceEditIds.set(row, (this.manualPriceEditIds.get(row) ?? 0) + 1);
+      this.autoUnitPrices.delete(row);
+      this.itemPriceError.set('');
     });
     return row;
   }

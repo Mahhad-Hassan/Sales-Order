@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { EMPTY, concatMap, expand, forkJoin, from, map, mergeMap, Observable, of, reduce, shareReplay, switchMap, tap } from 'rxjs';
+import { EMPTY, concatMap, expand, forkJoin, from, map, mergeMap, Observable, of, reduce, switchMap } from 'rxjs';
 import {
   CompanyOption,
   IncotermOption,
@@ -11,7 +11,6 @@ import {
   SalesOrderListOption,
   SalesOrderRecord,
   SellingPriceListOption,
-  WarehouseOption,
   WorkflowConfiguration,
   WorkflowStateOption,
 } from '../models/sales-order.model';
@@ -21,11 +20,9 @@ import { FrappeApiService } from './frappe-api.service';
 @Injectable({ providedIn: 'root' })
 export class FrappeSalesOrderService {
   private readonly api = inject(FrappeApiService);
-  private readonly itemPrices = new Map<string, Observable<ItemPriceOption[]>>();
 
   loadOptions(): Observable<{
     companies: CompanyOption[];
-    warehouses: WarehouseOption[];
     incoterms: IncotermOption[];
     items: SalesOrderItemOption[];
     paymentTerms: PaymentTermOption[];
@@ -36,15 +33,9 @@ export class FrappeSalesOrderService {
     return forkJoin({
       companies: this.api.getList<CompanyOption>(
         'Company',
-        ['name', 'default_currency'],
+        ['name', 'default_currency', 'default_warehouse'],
         [],
         500,
-      ),
-      warehouses: this.api.getList<WarehouseOption>(
-        'Warehouse',
-        ['name', 'warehouse_name', 'company', 'is_group', 'disabled'],
-        [['disabled', '=', 0], ['is_group', '=', 0]],
-        1000,
       ),
       incoterms: this.api.getList<IncotermOption>('Incoterm', ['name', 'title'], [], 500),
       items: this.api.getList<SalesOrderItemOption>(
@@ -339,25 +330,11 @@ export class FrappeSalesOrderService {
   }
 
   getItemPrices(itemCode: string, priceList: string): Observable<ItemPriceOption[]> {
-    const cacheKey = JSON.stringify([itemCode, priceList]);
-    const cached = this.itemPrices.get(cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    const request = this.api.getList<ItemPriceOption>(
+    return this.getAllPages<ItemPriceOption>(
       'Item Price',
       ['name', 'item_code', 'price_list', 'price_list_rate', 'uom', 'valid_from', 'valid_upto', 'selling'],
       [['item_code', '=', itemCode], ['price_list', '=', priceList], ['selling', '=', 1]],
-      100,
-    ).pipe(
-      tap({
-        error: () => this.itemPrices.delete(cacheKey),
-      }),
-      shareReplay({ bufferSize: 1, refCount: false }),
     );
-    this.itemPrices.set(cacheKey, request);
-    return request;
   }
 
   submitSalesOrder(order: SalesOrderRecord): Observable<SalesOrderRecord> {
