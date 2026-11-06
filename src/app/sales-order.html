@@ -207,11 +207,11 @@
         <div class="party-fields-grid">
         <div class="party-field">
           <label for="bill-name">NAME</label>
-          <input id="bill-name" type="text" formControlName="name" />
+          <input id="bill-name" type="text" formControlName="name" readonly />
         </div>
         <div class="party-field">
           <label for="bill-company">COMPANY NAME</label>
-          <input id="bill-company" type="text" formControlName="companyName" />
+          <input id="bill-company" type="text" formControlName="companyName" readonly />
         </div>
         <div class="party-field address-field">
           <label for="bill-address-trigger">POSTAL ADDRESS</label>
@@ -252,22 +252,22 @@
         </div>
         <div class="party-field">
           <label for="bill-phone">PHONE NO</label>
-          <input id="bill-phone" type="text" formControlName="phoneNo" />
+          <input id="bill-phone" type="text" formControlName="phoneNo" readonly />
         </div>
         <div class="party-field">
           <label for="bill-fax">FAX NO</label>
-          <input id="bill-fax" type="text" formControlName="faxNo" />
+          <input id="bill-fax" type="text" formControlName="faxNo" readonly />
         </div>
         <div class="party-field">
           <label for="bill-email">EMAIL</label>
           <div class="email-field-value">
-            <input id="bill-email" type="text" formControlName="email" />
+            <input id="bill-email" type="text" formControlName="email" readonly />
             @if (customerEmails().length > 1) {
               <button
                 class="email-dropdown-toggle"
                 type="button"
                 aria-label="Choose billing email"
-                [disabled]="orderForm.disabled"
+                [disabled]="true"
                 [attr.aria-expanded]="billingEmailDropdownOpen()"
                 (click)="toggleEmailDropdown('billTo')"
               ></button>
@@ -289,7 +289,7 @@
         </div>
         <div class="party-field">
           <label for="bill-ntn">NTN</label>
-          <input id="bill-ntn" type="text" formControlName="ntn" />
+          <input id="bill-ntn" type="text" formControlName="ntn" readonly />
         </div>
         </div>
       </section>
@@ -299,11 +299,11 @@
         <div class="party-fields-grid">
         <div class="party-field">
           <label for="ship-name">NAME</label>
-          <input id="ship-name" type="text" formControlName="name" />
+          <input id="ship-name" type="text" formControlName="name" readonly />
         </div>
         <div class="party-field">
           <label for="ship-company">COMPANY NAME</label>
-          <input id="ship-company" type="text" formControlName="companyName" />
+          <input id="ship-company" type="text" formControlName="companyName" readonly />
         </div>
         <div class="party-field address-field">
           <label for="ship-address-trigger">POSTAL ADDRESS</label>
@@ -344,22 +344,22 @@
         </div>
         <div class="party-field">
           <label for="ship-phone">PHONE NO</label>
-          <input id="ship-phone" type="text" formControlName="phoneNo" />
+          <input id="ship-phone" type="text" formControlName="phoneNo" readonly />
         </div>
         <div class="party-field">
           <label for="ship-fax">FAX NO</label>
-          <input id="ship-fax" type="text" formControlName="faxNo" />
+          <input id="ship-fax" type="text" formControlName="faxNo" readonly />
         </div>
         <div class="party-field">
           <label for="ship-email">EMAIL</label>
           <div class="email-field-value">
-            <input id="ship-email" type="text" formControlName="email" />
+            <input id="ship-email" type="text" formControlName="email" readonly />
             @if (customerEmails().length > 1) {
               <button
                 class="email-dropdown-toggle"
                 type="button"
                 aria-label="Choose shipping email"
-                [disabled]="orderForm.disabled"
+                [disabled]="true"
                 [attr.aria-expanded]="shippingEmailDropdownOpen()"
                 (click)="toggleEmailDropdown('shipTo')"
               ></button>
@@ -381,7 +381,7 @@
         </div>
         <div class="party-field">
           <label for="ship-ntn">NTN</label>
-          <input id="ship-ntn" type="text" formControlName="ntn" />
+          <input id="ship-ntn" type="text" formControlName="ntn" readonly />
         </div>
         </div>
       </section>
