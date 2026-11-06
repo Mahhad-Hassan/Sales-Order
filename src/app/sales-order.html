@@ -76,20 +76,6 @@
     <section class="form-card order-information-card" aria-label="Order Information">
       <h2 class="form-section-title"><i aria-hidden="true"></i>Order Information</h2>
       <div class="order-info-grid">
-        <label class="form-field" for="source-warehouse">
-          <span class="form-field-label">Source Warehouse</span>
-          <select
-            id="source-warehouse"
-            class="form-input"
-            aria-label="Source Warehouse"
-            formControlName="sourceWarehouse"
-          >
-            <option value="">{{ optionsLoading() ? 'Loading warehouses...' : 'Select source warehouse...' }}</option>
-            @for (warehouse of warehouses(); track warehouse.name) {
-              <option [value]="warehouse.name">{{ warehouse.name }}</option>
-            }
-          </select>
-        </label>
         <div class="form-field">
           <span class="form-field-label">Customer</span>
           <div class="customer-field relative">
@@ -144,12 +130,7 @@
           <span class="form-field-label">Date</span>
           <input id="order-date" aria-label="Date" lang="en-US" type="date" formControlName="date" class="form-input" />
         </label>
-        <div class="form-field">
-          <span class="form-field-label">Order Type</span>
-          <div class="form-static-value">Sales Order (V4)</div>
-        </div>
       </div>
-    </section>
     @if (optionsLoading() || orderLoading()) {
       <p class="mb-2 text-sm text-[#555]" role="status">
         {{ orderLoading() ? 'Loading Sales Order...' : 'Loading Sales Order options...' }}
@@ -318,6 +299,7 @@
         </div>
         </div>
       </section>
+    </section>
     </section>
 
     <section class="form-card" aria-label="Order dates and terms">
