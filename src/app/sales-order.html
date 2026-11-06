@@ -373,9 +373,9 @@
           </colgroup>
           <thead>
             <tr>
+              <th colspan="3">Product Name</th>
               <th class="text-center" colspan="2">Quantity</th>
               <th>Unit</th>
-              <th colspan="3">Product Name</th>
               <th colspan="2">Unit Price</th>
               <th colspan="2">Total</th>
             </tr>
@@ -383,9 +383,9 @@
           <tbody formArrayName="items">
             @for (row of itemRows.controls; track $index; let rowIndex = $index) {
               <tr [formGroupName]="rowIndex">
+                <td class="text-center" colspan="3"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Product Name" type="text" list="sales-order-items" formControlName="productName" /></td>
                 <td class="text-center" colspan="2"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Quantity" type="number" min="0" step="any" formControlName="quantity" /></td>
                 <td><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Unit" type="text" formControlName="unit" /></td>
-                <td class="text-center" colspan="3"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Product Name" type="text" list="sales-order-items" formControlName="productName" /></td>
                 <td colspan="2"><input class="h-full w-full min-w-0 border-0 bg-transparent px-[7px] py-[5px] text-[#222] outline-offset-[-2px]" aria-label="Unit Price" type="number" min="0" step="any" formControlName="unitPrice" /></td>
                 <td colspan="2">
                   <div class="flex h-[38px] items-stretch">

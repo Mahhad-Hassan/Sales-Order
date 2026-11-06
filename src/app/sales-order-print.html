@@ -86,9 +86,9 @@
             </colgroup>
             <thead>
               <tr>
+                <th colspan="3">Product Name</th>
                 <th colspan="2">Quantity</th>
                 <th>Unit</th>
-                <th colspan="3">Product Name</th>
                 <th colspan="2">Unit Price</th>
                 <th colspan="2">Total</th>
               </tr>
@@ -96,9 +96,9 @@
             <tbody>
               @for (item of savedOrder.items || []; track $index) {
                 <tr>
+                  <td class="text-center" colspan="3">{{ item.item_name || item.item_code }}</td>
                   <td class="text-center" colspan="2">{{ item.qty }}</td>
                   <td>{{ item.uom || item.stock_uom || '—' }}</td>
-                  <td class="text-center" colspan="3">{{ item.item_name || item.item_code }}</td>
                   <td colspan="2">{{ amount(item.rate) }}</td>
                   <td colspan="2">{{ amount(item.qty * item.rate) }}</td>
                 </tr>
