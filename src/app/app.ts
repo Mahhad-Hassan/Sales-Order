@@ -108,6 +108,7 @@ export class App {
     deliveryNote: 'Not Created',
     salesInvoice: 'Not Created',
   });
+  protected readonly workflowStateStyles = signal<Record<string, string>>({});
   protected readonly documentStatusesLoading = signal(false);
   protected readonly documentStatusesError = signal('');
   protected readonly salesOrderWorkflowActive = signal(false);
@@ -501,6 +502,25 @@ export class App {
   }
 
   protected documentStatusBackground(status: string): string {
+    const workflowStyle = this.workflowStateStyles()[status]?.toLocaleLowerCase();
+    if (workflowStyle === 'success') {
+      return '#dcfce7';
+    }
+    if (workflowStyle === 'danger') {
+      return '#fee2e2';
+    }
+    if (workflowStyle === 'warning') {
+      return '#ffedd5';
+    }
+    if (workflowStyle === 'info') {
+      return '#dbeafe';
+    }
+    if (workflowStyle === 'primary') {
+      return '#1e3a8a';
+    }
+    if (workflowStyle === 'inverse') {
+      return '#1f2937';
+    }
     const tone = this.documentStatusTone(status);
     return tone === 'green' ? '#e6f3ee'
       : tone === 'yellow' ? '#fff7db'
@@ -509,6 +529,22 @@ export class App {
   }
 
   protected documentStatusBorder(status: string): string {
+    const workflowStyle = this.workflowStateStyles()[status]?.toLocaleLowerCase();
+    if (workflowStyle === 'success') {
+      return '#86efac';
+    }
+    if (workflowStyle === 'danger') {
+      return '#fca5a5';
+    }
+    if (workflowStyle === 'warning') {
+      return '#fdba74';
+    }
+    if (workflowStyle === 'info') {
+      return '#93c5fd';
+    }
+    if (workflowStyle === 'primary' || workflowStyle === 'inverse') {
+      return workflowStyle === 'primary' ? '#1e3a8a' : '#1f2937';
+    }
     const tone = this.documentStatusTone(status);
     return tone === 'green' ? '#b9dccf'
       : tone === 'yellow' ? '#f2d675'
@@ -517,6 +553,22 @@ export class App {
   }
 
   protected documentStatusColor(status: string): string {
+    const workflowStyle = this.workflowStateStyles()[status]?.toLocaleLowerCase();
+    if (workflowStyle === 'success') {
+      return '#166534';
+    }
+    if (workflowStyle === 'danger') {
+      return '#991b1b';
+    }
+    if (workflowStyle === 'warning') {
+      return '#c2410c';
+    }
+    if (workflowStyle === 'info') {
+      return '#1d4ed8';
+    }
+    if (workflowStyle === 'primary' || workflowStyle === 'inverse') {
+      return '#fff';
+    }
     const tone = this.documentStatusTone(status);
     return tone === 'green' ? '#24765f'
       : tone === 'yellow' ? '#785c00'
@@ -541,24 +593,28 @@ export class App {
 
   private refreshDocumentStatuses(order: SalesOrderRecord): void {
     const requestId = ++this.documentStatusRequest;
-    const salesOrderStatus = this.salesOrderDocumentStatus(order);
     this.documentStatuses.set({
-      salesOrder: salesOrderStatus,
+      salesOrder: 'Loading...',
       deliveryNote: 'Loading...',
       salesInvoice: 'Loading...',
     });
     this.documentStatusesLoading.set(true);
     this.documentStatusesError.set('');
-    this.salesOrders.getLinkedDocumentStatuses([order.name]).pipe(
+    forkJoin({
+      salesOrderStatuses: this.salesOrders.getSalesOrderStatuses([order.name]),
+      linkedStatuses: this.salesOrders.getLinkedDocumentStatuses([order.name]),
+      workflowStateStyles: this.salesOrders.getWorkflowStateStyles(),
+    }).pipe(
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
-      next: (statuses) => {
+      next: ({ salesOrderStatuses, linkedStatuses, workflowStateStyles }) => {
         if (requestId !== this.documentStatusRequest || this.orderName !== order.name) {
           return;
         }
-        const linked = statuses[order.name];
+        this.workflowStateStyles.set(workflowStateStyles);
+        const linked = linkedStatuses[order.name];
         this.documentStatuses.set({
-          salesOrder: salesOrderStatus,
+          salesOrder: salesOrderStatuses[order.name] || this.salesOrderDocumentStatus(order),
           deliveryNote: this.linkedDocumentStatus(linked?.deliveryNoteStatus ?? '—', order, 'delivery'),
           salesInvoice: this.linkedDocumentStatus(linked?.salesInvoiceStatus ?? '—', order, 'invoice'),
         });
@@ -569,7 +625,7 @@ export class App {
           return;
         }
         this.documentStatuses.set({
-          salesOrder: salesOrderStatus,
+          salesOrder: 'Unavailable',
           deliveryNote: 'Unavailable',
           salesInvoice: 'Unavailable',
         });
