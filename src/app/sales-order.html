@@ -195,7 +195,7 @@
               (change)="selectBillingAddress($event)"
             >
               @for (address of billingAddressOptions(); track address.docName) {
-                <option [value]="address.docName">{{ address.details.postalAddress }}</option>
+                <option [value]="address.docName">{{ address.label }}</option>
               }
             </select>
           } @else {
@@ -268,7 +268,7 @@
               (change)="selectShippingAddress($event)"
             >
               @for (address of shippingAddressOptions(); track address.docName) {
-                <option [value]="address.docName">{{ address.details.postalAddress }}</option>
+                <option [value]="address.docName">{{ address.label }}</option>
               }
             </select>
           } @else {
