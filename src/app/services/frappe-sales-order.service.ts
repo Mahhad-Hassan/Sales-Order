@@ -254,6 +254,7 @@ export class FrappeSalesOrderService {
         'Delivery Note',
         'against_sales_order',
         salesOrderNames,
+        true,
       ),
       salesInvoices: this.getSalesInvoiceOrderField().pipe(
         switchMap((salesOrderField) => this.getStatusesForLinkedDocuments(
@@ -306,6 +307,7 @@ export class FrappeSalesOrderService {
     parentDocType: string,
     salesOrderField: 'against_sales_order' | 'sales_order',
     salesOrderNames: string[],
+    includeStatusCounts = false,
   ): Observable<Record<string, string>> {
     return this.getActiveWorkflowStateField(parentDocType).pipe(
       switchMap((workflowStateField) => {
@@ -361,7 +363,7 @@ export class FrappeSalesOrderService {
                 return documents;
               }, [] as LinkedDocumentStatus[]),
               map((documents) => {
-                const statusBySalesOrder = new Map<string, Set<string>>();
+                const statusBySalesOrder = new Map<string, Map<string, number>>();
                 const statusByParent = new Map(documents.map((document) => [
                   document.name,
                   document.docstatus === 0 || document.docstatus === 2
@@ -376,14 +378,19 @@ export class FrappeSalesOrderService {
                     continue;
                   }
                   for (const salesOrderName of linkedSalesOrders) {
-                    const statuses = statusBySalesOrder.get(salesOrderName) ?? new Set<string>();
-                    statuses.add(status);
+                    const statuses = statusBySalesOrder.get(salesOrderName) ?? new Map<string, number>();
+                    statuses.set(
+                      status,
+                      includeStatusCounts ? (statuses.get(status) ?? 0) + 1 : 1,
+                    );
                     statusBySalesOrder.set(salesOrderName, statuses);
                   }
                 }
                 return Object.fromEntries([...statusBySalesOrder].map(([name, statuses]) => [
                   name,
-                  [...statuses].join(', '),
+                  [...statuses].map(([status, count]) => includeStatusCounts
+                    ? `${status} (${count})`
+                    : status).join(', '),
                 ]));
               }),
             );

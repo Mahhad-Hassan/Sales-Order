@@ -163,7 +163,8 @@ export class SalesOrderListPage {
   }
 
   protected statusStyleClass(status: string): string {
-    switch ((this.workflowStateStyles()[status] ?? '').toLocaleLowerCase()) {
+    const statusName = status.replace(/\s+\(\d+\)$/, '');
+    switch ((this.workflowStateStyles()[statusName] ?? '').toLocaleLowerCase()) {
       case 'success':
         return 'workflow-status-success';
       case 'danger':
