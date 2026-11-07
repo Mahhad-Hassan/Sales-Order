@@ -26,12 +26,13 @@ export class SalesOrderListPage {
   protected readonly loading = signal(true);
   protected readonly error = signal('');
   protected readonly filteredOrders = computed(() => {
+    const visibleOrders = this.orders().filter((order) => !this.isTerminalOrder(order));
     const query = this.searchText().trim().toLocaleLowerCase();
     if (!query) {
-      return this.orders();
+      return visibleOrders;
     }
 
-    return this.orders().filter((order) => [
+    return visibleOrders.filter((order) => [
       order.name,
       order.customer,
       order.customer_name,
@@ -156,6 +157,11 @@ export class SalesOrderListPage {
       return order.status;
     }
     return order.docstatus === 1 ? 'Submitted' : order.docstatus === 2 ? 'Cancelled' : 'Draft';
+  }
+
+  private isTerminalOrder(order: SalesOrderListOption): boolean {
+    const status = this.orderStatus(order).trim().toLocaleLowerCase();
+    return ['approved', 'rejected', 'cancelled'].includes(status);
   }
 
   protected statusValues(status: string | undefined): string[] {
